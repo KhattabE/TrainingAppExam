@@ -57,6 +57,9 @@ public class User {
         this.goal = goal;
     }
 
+    @ManyToOne
+    private WorkoutProgram workoutProgram;
+
 
 
 }
