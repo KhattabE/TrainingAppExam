@@ -1,6 +1,9 @@
 package app.dao;
 
+import app.entities.ExperienceLevel;
 import app.entities.User;
+
+import java.util.List;
 
 public interface UserDAO {
 
@@ -12,5 +15,9 @@ public interface UserDAO {
 
     void delete(int id);
 
+    List<User> getAll();
 
+    List<User> getByExperienceLevel(ExperienceLevel experienceLevel);
+
+    List<User> getByWorkoutProgramName(String programName);
 }
