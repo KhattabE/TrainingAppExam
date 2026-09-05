@@ -19,4 +19,16 @@ class AiCoachServiceTest {
 
         System.out.println(response);
     }
+
+    @Test
+    void askCoachShouldReturnAnswer() throws IOException, InterruptedException {
+        AiCoachService aiCoachService = new AiCoachService();
+
+        String answer = aiCoachService.askCoach("What are calories?");
+
+        assertNotNull(answer);
+        assertFalse(answer.isBlank());
+
+        System.out.println(answer);
+    }
 }

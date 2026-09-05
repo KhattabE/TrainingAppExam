@@ -9,6 +9,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Map;
+import tools.jackson.databind.JsonNode;
 
 public class AiCoachService {
     private static final String API_KEY = System.getenv("GEMINI_API_KEY");
@@ -37,6 +38,21 @@ public class AiCoachService {
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-        return response.body();
+        if (response.statusCode() != 200) {
+            throw new IOException("Gemini API error: " + response.statusCode());
+        }
+
+        JsonNode root = objectMapper.readTree(response.body());
+
+        String answer = root
+                .get("candidates")
+                .get(0)
+                .get("content")
+                .get("parts")
+                .get(0)
+                .get("text")
+                .asText();
+
+        return answer;
     }
 }
