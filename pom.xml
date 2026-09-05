@@ -24,6 +24,13 @@
 
     <dependencies>
 
+        <!-- JACKSON -->
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>3.2.2</version>
+        </dependency>
+
         <!--  DB    -->
         <dependency>
             <groupId>org.postgresql</groupId>
