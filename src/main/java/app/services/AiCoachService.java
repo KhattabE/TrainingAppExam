@@ -8,8 +8,10 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
-import java.util.Map;
 import tools.jackson.databind.JsonNode;
+import app.dto.GeminiContentDTO;
+import app.dto.GeminiPartDTO;
+import app.dto.GeminiRequestDTO;
 
 public class AiCoachService {
     private static final String API_KEY = System.getenv("GEMINI_API_KEY");
@@ -19,12 +21,14 @@ public class AiCoachService {
     private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent";
 
     public String askCoach(String question) throws IOException, InterruptedException {
-        Map<String, Object> requestBody = Map.of(
-                "contents", List.of(
-                        Map.of("parts", List.of(
-                                Map.of("text", question)
-                        ))
-                )
+        GeminiPartDTO part = new GeminiPartDTO(question);
+
+        GeminiContentDTO content = new GeminiContentDTO(
+                List.of(part)
+        );
+
+        GeminiRequestDTO requestBody = new GeminiRequestDTO(
+                List.of(content)
         );
 
         String jsonBody = objectMapper.writeValueAsString(requestBody);
