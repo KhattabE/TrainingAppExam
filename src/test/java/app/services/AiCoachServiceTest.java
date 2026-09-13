@@ -4,27 +4,19 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class AiCoachServiceTest {
 
     @Test
-    void askCoachShouldReturnResponse() throws IOException, InterruptedException {
+    void askCoachShouldReturnGeneratedAnswer()
+            throws IOException, InterruptedException {
+
         AiCoachService aiCoachService = new AiCoachService();
 
-        String response = aiCoachService.askCoach("What are calories?");
-
-        assertNotNull(response);
-        assertFalse(response.isBlank());
-
-        System.out.println(response);
-    }
-
-    @Test
-    void askCoachShouldReturnAnswer() throws IOException, InterruptedException {
-        AiCoachService aiCoachService = new AiCoachService();
-
-        String answer = aiCoachService.askCoach("What are calories?");
+        String answer =
+                aiCoachService.askCoach("What are calories?");
 
         assertNotNull(answer);
         assertFalse(answer.isBlank());
