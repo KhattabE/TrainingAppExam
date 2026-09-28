@@ -31,6 +31,13 @@
             <version>2.19.2</version>
         </dependency>
 
+        <!-- JAVALIN -->
+        <dependency>
+            <groupId>io.javalin</groupId>
+            <artifactId>javalin</artifactId>
+            <version>6.5.0</version>
+        </dependency>
+
         <!--  DB    -->
         <dependency>
             <groupId>org.postgresql</groupId>

@@ -2,6 +2,7 @@ package app;
 
 
 import app.config.HibernateConfig;
+import app.entities.User;
 import jakarta.persistence.EntityManagerFactory;
 
 public class Main {
@@ -9,6 +10,8 @@ public class Main {
 
            EntityManagerFactory emf = HibernateConfig.getEntityManagerFactory();
 
+           User user = new User();
+           
            emf.close();
 
     }
