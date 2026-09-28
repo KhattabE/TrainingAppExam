@@ -1,0 +1,100 @@
+### Health check
+GET http://localhost:7070/api/health
+
+
+### Ask coach
+POST http://localhost:7070/api/coach
+Content-Type: application/json
+
+{
+  "prompt": "How long should I rest between heavy sets?"
+}
+
+
+### Ask coach with empty prompt
+POST http://localhost:7070/api/coach
+Content-Type: application/json
+
+{
+  "prompt": ""
+}
+
+
+### Create exercise
+POST http://localhost:7070/api/exercises
+Content-Type: application/json
+
+{
+  "name": "Bench Press",
+  "muscleGroup": "CHEST",
+  "sets": 4,
+  "reps": 8
+}
+
+
+### Get all exercises
+GET http://localhost:7070/api/exercises
+
+
+### Get exercise by id
+GET http://localhost:7070/api/exercises/3
+
+
+### Update exercise
+PUT http://localhost:7070/api/exercises/3
+Content-Type: application/json
+
+{
+  "name": "Barbell Bench Press",
+  "muscleGroup": "CHEST",
+  "sets": 5,
+  "reps": 5
+}
+
+
+### Delete exercise
+DELETE http://localhost:7070/api/exercises/3
+
+
+### Get exercise that does not exist
+GET http://localhost:7070/api/exercises/999999
+
+
+### Get exercise with invalid id
+GET http://localhost:7070/api/exercises/0
+
+
+### Create user
+POST http://localhost:7070/api/users
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "test@test.com",
+  "age": 24,
+  "height": 180,
+  "weight": 80,
+  "experienceLevel": "BEGINNER",
+  "trainingDaysPerWeek": 4,
+  "goal": "MUSCLE_GAIN"
+}
+
+
+### Get all users
+GET http://localhost:7070/api/users
+
+
+### Get user by id
+GET http://localhost:7070/api/users/3
+
+
+### Get user that does not exist
+GET http://localhost:7070/api/users/999999
+
+
+### Generate workout program for user
+POST http://localhost:7070/api/users/3/workout-program
+
+
+### Check user after workout program generation
+GET http://localhost:7070/api/users/3
