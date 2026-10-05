@@ -1,19 +1,22 @@
 package app.dao;
 
-import app.config.HibernateConfig;
 import app.entities.WorkoutProgram;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 
 import java.util.List;
 
-public class WorkoutProgramDAOImpl implements WorkoutProgramDAO{
+public class WorkoutProgramDAOImpl implements WorkoutProgramDAO {
 
-       private EntityManagerFactory emf = HibernateConfig.getEntityManagerFactory();
+    private final EntityManagerFactory emf;
+
+    public WorkoutProgramDAOImpl(EntityManagerFactory emf) {
+        this.emf = emf;
+    }
 
     @Override
     public WorkoutProgram create(WorkoutProgram workoutProgram) {
-        try(EntityManager em = emf.createEntityManager()){
+        try (EntityManager em = emf.createEntityManager()) {
             em.getTransaction().begin();
             em.persist(workoutProgram);
             em.getTransaction().commit();
@@ -23,14 +26,18 @@ public class WorkoutProgramDAOImpl implements WorkoutProgramDAO{
 
     @Override
     public WorkoutProgram getById(int id) {
-        try(EntityManager em = emf.createEntityManager()){
-            return em.find(WorkoutProgram.class,id);
+        try (EntityManager em = emf.createEntityManager()) {
+            return em.createQuery("SELECT DISTINCT w FROM WorkoutProgram w LEFT JOIN FETCH w.exercises WHERE w.id = :id", WorkoutProgram.class)
+                    .setParameter("id", id)
+                    .getResultStream()
+                    .findFirst()
+                    .orElse(null);
         }
     }
 
     @Override
     public WorkoutProgram update(WorkoutProgram workoutProgram) {
-        try(EntityManager em = emf.createEntityManager()){
+        try (EntityManager em = emf.createEntityManager()) {
             em.getTransaction().begin();
             WorkoutProgram updatedWorkoutProgram = em.merge(workoutProgram);
             em.getTransaction().commit();
@@ -40,11 +47,11 @@ public class WorkoutProgramDAOImpl implements WorkoutProgramDAO{
 
     @Override
     public void delete(int id) {
-        try(EntityManager em = emf.createEntityManager()){
+        try (EntityManager em = emf.createEntityManager()) {
             em.getTransaction().begin();
-            WorkoutProgram foundWorkout = em.find(WorkoutProgram.class,id);
+            WorkoutProgram foundWorkout = em.find(WorkoutProgram.class, id);
 
-            if(foundWorkout != null){
+            if (foundWorkout != null) {
                 em.remove(foundWorkout);
             } else {
                 System.out.println("No workout program with that id!");
@@ -57,7 +64,7 @@ public class WorkoutProgramDAOImpl implements WorkoutProgramDAO{
 
     @Override
     public List<WorkoutProgram> getAll() {
-        try(EntityManager em = emf.createEntityManager()){
+        try (EntityManager em = emf.createEntityManager()) {
            List<WorkoutProgram> allWorkoutPrograms = em.createQuery("SELECT w FROM WorkoutProgram w", WorkoutProgram.class)
                     .getResultList();
            return allWorkoutPrograms;

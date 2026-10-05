@@ -1,44 +1,70 @@
 package app.dao;
 
 import app.entities.WorkoutProgram;
+import app.testutils.DatabaseTest;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class WorkoutProgramDAOTest {
+class WorkoutProgramDAOTest extends DatabaseTest {
 
-    private WorkoutProgramDAO workoutProgramDAO = new WorkoutProgramDAOImpl();
+    private WorkoutProgramDAO workoutProgramDAO;
 
-    @Test
-    void createAndGetByIdTest() {
-        WorkoutProgram workoutProgram =
-                new WorkoutProgram("Test Full Body", "Test program", 3);
-
-        workoutProgramDAO.create(workoutProgram);
-
-        WorkoutProgram foundWorkoutProgram =
-                workoutProgramDAO.getById(workoutProgram.getId());
-
-        assertNotNull(foundWorkoutProgram);
-        assertEquals("Test Full Body", foundWorkoutProgram.getName());
-
-        workoutProgramDAO.delete(workoutProgram.getId());
+    @BeforeEach
+    void setUp() {
+        workoutProgramDAO = new WorkoutProgramDAOImpl(emf);
     }
 
     @Test
-    void getByTrainingDaysPerWeekTest() {
-        WorkoutProgram workoutProgram =
-                new WorkoutProgram("Test Program 4 Days", "Test program", 4);
+    void createAndReadProgramWithExercises() {
+        WorkoutProgram program = new WorkoutProgram("Leg Day", "Lower body", 2);
+        program.setExercises(new ArrayList<>(List.of(seed.squat())));
+        WorkoutProgram saved = workoutProgramDAO.create(program);
+        WorkoutProgram found = workoutProgramDAO.getById(saved.getId());
+        assertNotNull(saved.getId());
+        assertEquals("Leg Day", found.getName());
+        assertEquals("Lower body", found.getDescription());
+        assertEquals(2, found.getTrainingDaysPerWeek());
+        assertEquals(List.of(seed.squat().getId()), found.getExercises().stream().map(exercise -> exercise.getId()).toList());
+    }
 
-        workoutProgramDAO.create(workoutProgram);
+    @Test
+    void listContainsExactlySeededPrograms() {
+        List<WorkoutProgram> programs = workoutProgramDAO.getAll();
+        assertEquals(2, programs.size());
+        assertTrue(programs.stream().anyMatch(program -> program.getId().equals(seed.fullBody().getId())));
+        assertTrue(programs.stream().anyMatch(program -> program.getId().equals(seed.upperBody().getId())));
+    }
 
-        List<WorkoutProgram> programs =
-                workoutProgramDAO.getByTrainingDaysPerWeek(4);
+    @Test
+    void updateIsPersisted() {
+        WorkoutProgram program = workoutProgramDAO.getById(seed.upperBody().getId());
+        program.setName("Upper Body Updated");
+        program.setTrainingDaysPerWeek(5);
+        workoutProgramDAO.update(program);
+        WorkoutProgram found = workoutProgramDAO.getById(program.getId());
+        assertEquals("Upper Body Updated", found.getName());
+        assertEquals(5, found.getTrainingDaysPerWeek());
+        assertEquals(1, found.getExercises().size());
+    }
 
-        assertFalse(programs.isEmpty());
+    @Test
+    void deletePreservesExercises() {
+        workoutProgramDAO.delete(seed.upperBody().getId());
+        assertNull(workoutProgramDAO.getById(seed.upperBody().getId()));
+        assertNotNull(new ExerciseDAOImpl(emf).getById(seed.benchPress().getId()));
+        assertEquals(1, workoutProgramDAO.getAll().size());
+    }
 
-        workoutProgramDAO.delete(workoutProgram.getId());
+    @Test
+    void trainingDaysQueryReturnsOnlyMatchingProgram() {
+        List<WorkoutProgram> programs = workoutProgramDAO.getByTrainingDaysPerWeek(3);
+        assertEquals(1, programs.size());
+        assertEquals(seed.fullBody().getId(), programs.get(0).getId());
+        assertTrue(workoutProgramDAO.getByTrainingDaysPerWeek(7).isEmpty());
     }
 }

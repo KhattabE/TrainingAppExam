@@ -3,10 +3,9 @@ package app.services;
 import app.dto.GeneratedWorkoutProgramDTO;
 import app.dto.GeminiResponseDTO;
 import app.entities.User;
-
+import app.exceptions.ApiException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,7 +14,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -23,27 +22,27 @@ public class AiCoachService {
 
     private static final Logger logger = LoggerFactory.getLogger(AiCoachService.class);
 
-    private final String apiKey = System.getenv("GEMINI_API_KEY");
+    private final String apiKey;
+    private final URI apiUrl;
 
     private static final String MODEL = "gemini-3.5-flash-lite";
 
-    private static final String API_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/"
-                    + MODEL
-                    + ":generateContent";
+    private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL + ":generateContent";
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-    private final ObjectMapper objectMapper =
-            new ObjectMapper()
-                    .configure(
-                            DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
-                            false
-                    );
+    public AiCoachService() {
+        this(System.getenv("GEMINI_API_KEY"), URI.create(API_URL));
+    }
 
-    public String askCoach(String question)
-            throws IOException, InterruptedException {
+    public AiCoachService(String apiKey, URI apiUrl) {
+        this.apiKey = apiKey;
+        this.apiUrl = apiUrl;
+    }
 
+    public String askCoach(String question) throws IOException, InterruptedException {
         String prompt = """
                 You are a concise AI fitness coach.
 
@@ -60,17 +59,10 @@ public class AiCoachService {
                 %s
                 """.formatted(question);
 
-        return callGemini(
-                prompt,
-                250,
-                false
-        );
+        return callGemini(prompt, 250, false);
     }
 
-    public GeneratedWorkoutProgramDTO generateWorkoutProgram(
-            User user
-    ) throws IOException, InterruptedException {
-
+    public GeneratedWorkoutProgramDTO generateWorkoutProgram(User user) throws IOException, InterruptedException {
         String prompt = """
                 You are an AI fitness coach creating a structured workout program.
 
@@ -120,145 +112,57 @@ public class AiCoachService {
                 Do not include markdown.
                 Do not include ```json.
                 Do not include explanations outside the JSON.
-                """.formatted(
-                user.getAge(),
-                user.getHeight(),
-                user.getWeight(),
-                user.getExperienceLevel(),
-                user.getGoal(),
-                user.getTrainingDaysPerWeek(),
-                user.getTrainingDaysPerWeek()
-        );
+                """.formatted(user.getAge(), user.getHeight(), user.getWeight(), user.getExperienceLevel(),
+                user.getGoal(), user.getTrainingDaysPerWeek(), user.getTrainingDaysPerWeek());
 
-        String json = callGemini(
-                prompt,
-                1800,
-                true
-        );
-
-        json = stripCodeFences(json);
-
-        return objectMapper.readValue(
-                json,
-                GeneratedWorkoutProgramDTO.class
-        );
+        String json = stripCodeFences(callGemini(prompt, 1800, true));
+        return objectMapper.readValue(json, GeneratedWorkoutProgramDTO.class);
     }
 
-    private String callGemini(
-            String prompt,
-            int maxOutputTokens,
-            boolean jsonMode
-    ) throws IOException, InterruptedException {
-
+    private String callGemini(String prompt, int maxOutputTokens, boolean jsonMode) throws IOException, InterruptedException {
         if (apiKey == null || apiKey.isBlank()) {
-
-            throw new IllegalStateException(
-                    "GEMINI_API_KEY is not configured"
-            );
+            throw new IllegalStateException("GEMINI_API_KEY is not configured");
         }
 
-        Map<String, Object> generationConfig;
-
-        if (jsonMode) {
-
-            generationConfig = Map.of(
-                    "maxOutputTokens", maxOutputTokens,
-                    "responseMimeType", "application/json"
-            );
-
-        } else {
-
-            generationConfig = Map.of(
-                    "maxOutputTokens", maxOutputTokens
-            );
-        }
-
+        Map<String, Object> generationConfig = jsonMode
+                ? Map.of("maxOutputTokens", maxOutputTokens, "responseMimeType", "application/json")
+                : Map.of("maxOutputTokens", maxOutputTokens);
         Map<String, Object> body = Map.of(
-                "contents", List.of(
-                        Map.of(
-                                "parts", List.of(
-                                        Map.of(
-                                                "text",
-                                                prompt
-                                        )
-                                )
-                        )
-                ),
-                "generationConfig",
-                generationConfig
-        );
-
+                "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
+                "generationConfig", generationConfig);
         String jsonBody = objectMapper.writeValueAsString(body);
 
-        HttpRequest request =
-                HttpRequest.newBuilder()
-                        .uri(URI.create(API_URL))
-                        .header(
-                                "Content-Type",
-                                "application/json"
-                        )
-                        .header(
-                                "x-goog-api-key",
-                                apiKey
-                        )
-                        .POST(
-                                HttpRequest.BodyPublishers
-                                        .ofString(jsonBody)
-                        )
-                        .build();
-
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(apiUrl)
+                .timeout(Duration.ofSeconds(60))
+                .header("Content-Type", "application/json")
+                .header("x-goog-api-key", apiKey)
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                .build();
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-        logger.info(
-                "Gemini responded with status {}",
-                response.statusCode()
-        );
+        logger.info("Gemini responded with status {}", response.statusCode());
 
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-
-            throw new IllegalStateException("Gemini API returned status " + response.statusCode());
-
+            throw new ApiException(502, "AI service returned an unsuccessful response");
         }
 
-        GeminiResponseDTO geminiResponse =
-                objectMapper.readValue(
-                        response.body(),
-                        GeminiResponseDTO.class
-                );
-
-        if (geminiResponse.candidates() == null
-                || geminiResponse.candidates().isEmpty()
-                || geminiResponse.candidates().get(0).content() == null
+        GeminiResponseDTO geminiResponse = objectMapper.readValue(response.body(), GeminiResponseDTO.class);
+        if (geminiResponse == null || geminiResponse.candidates() == null || geminiResponse.candidates().isEmpty()
+                || geminiResponse.candidates().get(0) == null || geminiResponse.candidates().get(0).content() == null
                 || geminiResponse.candidates().get(0).content().parts() == null
-                || geminiResponse.candidates().get(0).content().parts().isEmpty()) {
-
-            throw new IllegalStateException(
-                    "Gemini returned no usable response"
-            );
+                || geminiResponse.candidates().get(0).content().parts().isEmpty()
+                || geminiResponse.candidates().get(0).content().parts().get(0) == null) {
+            throw new ApiException(502, "AI service returned no usable response");
         }
 
-        return geminiResponse
-                .candidates()
-                .get(0)
-                .content()
-                .parts()
-                .get(0)
-                .text();
+        String answer = geminiResponse.candidates().get(0).content().parts().get(0).text();
+        if (answer == null || answer.isBlank()) {
+            throw new ApiException(502, "AI service returned an empty response");
+        }
+        return answer;
     }
 
-
     private String stripCodeFences(String text) {
-
-        return text
-                .trim()
-                .replaceFirst(
-                        "^```(?:json)?\\s*",
-                        ""
-                )
-                .replaceFirst(
-                        "\\s*```$",
-                        ""
-                )
-                .trim();
+        return text.trim().replaceFirst("^```(?:json)?\\s*", "").replaceFirst("\\s*```$", "").trim();
     }
 }

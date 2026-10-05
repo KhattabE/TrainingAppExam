@@ -1,6 +1,6 @@
 package app.api;
 
-import app.dao.UserDAOImpl;
+import app.dao.UserDAO;
 import app.dto.UserRequestDTO;
 import app.dto.UserResponseDTO;
 import app.entities.User;
@@ -10,9 +10,9 @@ import java.util.List;
 
 public class UserController {
 
-    private final UserDAOImpl userDAO;
+    private final UserDAO userDAO;
 
-    public UserController(UserDAOImpl userDAO) {
+    public UserController(UserDAO userDAO) {
         this.userDAO = userDAO;
     }
 
@@ -29,16 +29,8 @@ public class UserController {
                 .check(user -> user.goal() != null, "Training goal is required")
                 .get();
 
-        User user = new User(
-                request.name(),
-                request.email(),
-                request.age(),
-                request.height(),
-                request.weight(),
-                request.experienceLevel(),
-                request.trainingDaysPerWeek(),
-                request.goal()
-        );
+        User user = new User(request.name(), request.email(), request.age(), request.height(), request.weight(),
+                request.experienceLevel(), request.trainingDaysPerWeek(), request.goal());
 
         User savedUser = userDAO.create(user);
 
