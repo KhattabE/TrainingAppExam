@@ -1,6 +1,6 @@
 package app.api;
 
-import app.dao.ExerciseDAOImpl;
+import app.dao.ExerciseDAO;
 import app.dto.ExerciseRequestDTO;
 import app.dto.ExerciseResponseDTO;
 import app.entities.Exercise;
@@ -10,9 +10,9 @@ import java.util.List;
 
 public class ExerciseController {
 
-    private final ExerciseDAOImpl exerciseDAO;
+    private final ExerciseDAO exerciseDAO;
 
-    public ExerciseController(ExerciseDAOImpl exerciseDAO) {
+    public ExerciseController(ExerciseDAO exerciseDAO) {
         this.exerciseDAO = exerciseDAO;
     }
 
@@ -43,12 +43,7 @@ public class ExerciseController {
     public void create(Context ctx) {
         ExerciseRequestDTO request = getValidatedRequest(ctx);
 
-        Exercise exercise = new Exercise(
-                request.name(),
-                request.muscleGroup(),
-                request.sets(),
-                request.reps()
-        );
+        Exercise exercise = new Exercise(request.name(), request.muscleGroup(), request.sets(), request.reps());
 
         Exercise savedExercise = exerciseDAO.create(exercise);
 

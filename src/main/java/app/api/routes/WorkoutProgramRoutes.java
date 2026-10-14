@@ -7,17 +7,11 @@ public class WorkoutProgramRoutes {
 
     private final WorkoutProgramController controller;
 
-
     public WorkoutProgramRoutes(WorkoutProgramController controller) {
         this.controller = controller;
     }
 
-
     public void register(Javalin app) {
-
-        app.post(
-                "/api/users/{id}/workout-program",
-                controller::generateForUser
-        );
+        app.post("/api/users/{id}/workout-program", controller::generateForUser);
     }
 }

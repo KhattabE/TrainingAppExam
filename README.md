@@ -1,4 +1,4 @@
-## REST API Documentation
+# Training App API Documentation
 
 Base URL:
 
@@ -11,7 +11,7 @@ http://localhost:7070
 | Method | URL | Request Body | Success Response | Errors |
 |---|---|---|---|---|
 | GET | `/api/health` | None | `200 OK` | `500 Internal Server Error` |
-| POST | `/api/coach` | Coach request | `200 OK` | `400 Bad Request`, `500 Internal Server Error` |
+| POST | `/api/coach` | Coach request | `200 OK` | `400 Bad Request`, `500 Internal Server Error`, `502 Bad Gateway`, `503 Service Unavailable` |
 | GET | `/api/exercises` | None | `200 OK` | `500 Internal Server Error` |
 | GET | `/api/exercises/{id}` | None | `200 OK` | `400 Bad Request`, `404 Not Found` |
 | POST | `/api/exercises` | Exercise request | `201 Created` | `400 Bad Request` |
@@ -20,7 +20,20 @@ http://localhost:7070
 | GET | `/api/users` | None | `200 OK` | `500 Internal Server Error` |
 | GET | `/api/users/{id}` | None | `200 OK` | `400 Bad Request`, `404 Not Found` |
 | POST | `/api/users` | User request | `201 Created` | `400 Bad Request` |
-| POST | `/api/users/{id}/workout-program` | None | `201 Created` | `400 Bad Request`, `404 Not Found`, `500 Internal Server Error` |
+| POST | `/api/users/{id}/workout-program` | None | `201 Created` | `400 Bad Request`, `404 Not Found`, `500 Internal Server Error`, `502 Bad Gateway`, `503 Service Unavailable` |
+
+### Error format
+
+All API errors, including validation failures and unknown routes, use the same JSON format. The `status` value matches the HTTP status code:
+
+```json
+{
+  "status": 400,
+  "msg": "Prompt cannot be empty"
+}
+```
+
+Validation can report more than one problem in `msg`. Unexpected server errors return a generic message; details are logged on the server. Invalid or unsuccessful AI responses return 502. An interrupted AI request returns 503.
 
 ---
 
@@ -53,7 +66,7 @@ GET /api/health
 
 ### Ask AI Coach
 
-Sends a short fitness-related question to the AI coach.
+Sends a short fitness related question to the AI coach.
 
 ### Request
 
@@ -88,7 +101,15 @@ Returned if the prompt is missing or empty.
 
 `500 Internal Server Error`
 
-Returned if an unexpected error occurs while processing the request or communicating with the AI service.
+Returned if an unexpected server error occurs or the server is missing its AI configuration.
+
+`502 Bad Gateway`
+
+Returned if the external AI request fails or its response cannot be used.
+
+`503 Service Unavailable`
+
+Returned if the AI request is interrupted.
 
 ---
 
@@ -668,7 +689,15 @@ Returned if no user exists with the given ID.
 
 `500 Internal Server Error`
 
-Returned if an unexpected error occurs while generating or saving the workout program.
+Returned if an unexpected server or database error occurs. Database changes made during generation are rolled back together.
+
+`502 Bad Gateway`
+
+Returned if the AI request fails, its JSON cannot be parsed, or the generated program contains missing names, descriptions, exercises, muscle groups or nonpositive sets/reps.
+
+`503 Service Unavailable`
+
+Returned if the AI request is interrupted.
 
 ---
 
@@ -681,4 +710,7 @@ Returned if an unexpected error occurs while generating or saving the workout pr
 | `204 No Content` | A resource was deleted successfully |
 | `400 Bad Request` | Request data or a path parameter was invalid |
 | `404 Not Found` | Requested resource could not be found |
+| `405 Method Not Allowed` | The requested HTTP method is not supported for this URL |
 | `500 Internal Server Error` | An unexpected server-side error occurred |
+| `502 Bad Gateway` | The AI service failed or returned unusable data |
+| `503 Service Unavailable` | The AI request was interrupted |

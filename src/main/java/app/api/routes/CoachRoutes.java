@@ -11,12 +11,7 @@ public class CoachRoutes {
         this.controller = controller;
     }
 
-
     public void register(Javalin app) {
-
-        app.post(
-                "/api/coach",
-                controller::ask
-        );
+        app.post("/api/coach", controller::ask);
     }
 }
