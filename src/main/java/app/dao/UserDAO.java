@@ -20,4 +20,6 @@ public interface UserDAO {
     List<User> getByExperienceLevel(ExperienceLevel experienceLevel);
 
     List<User> getByWorkoutProgramName(String programName);
+
+    User getByEmail(String email);
 }

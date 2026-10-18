@@ -24,6 +24,10 @@ public class User {
     private String name;
 
     @Column
+    @ToString.Exclude
+    private String password;
+
+    @Column
     private String email;
 
     @Column
@@ -46,8 +50,9 @@ public class User {
     @Column
     private TrainingGoal goal;
 
-    public User(String name, String email, int age, double height, double weight, ExperienceLevel experienceLevel, int trainingDaysPerWeek, TrainingGoal goal) {
+    public User(String name, String password, String email, int age, double height, double weight, ExperienceLevel experienceLevel, int trainingDaysPerWeek, TrainingGoal goal) {
         this.name = name;
+        this.password = password;
         this.email = email;
         this.age = age;
         this.height = height;
