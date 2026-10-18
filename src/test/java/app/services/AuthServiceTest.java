@@ -62,8 +62,7 @@ class AuthServiceTest extends DatabaseTest {
     void loginRejectsWrongPassword() {
         authService.register(registrationUser("login@test.dk", "correct-password"));
 
-        ApiException exception = assertThrows(ApiException.class,
-                () -> authService.login("login@test.dk", "wrong-password"));
+        ApiException exception = assertThrows(ApiException.class, () -> authService.login("login@test.dk", "wrong-password"));
 
         assertEquals(401, exception.getCode());
         assertEquals("Invalid email or password", exception.getMessage());
@@ -71,8 +70,7 @@ class AuthServiceTest extends DatabaseTest {
 
     @Test
     void loginRejectsUnknownEmailWithSameMessage() {
-        ApiException exception = assertThrows(ApiException.class,
-                () -> authService.login("unknown@test.dk", "password"));
+        ApiException exception = assertThrows(ApiException.class, () -> authService.login("unknown@test.dk", "password"));
 
         assertEquals(401, exception.getCode());
         assertEquals("Invalid email or password", exception.getMessage());
@@ -80,16 +78,14 @@ class AuthServiceTest extends DatabaseTest {
 
     @Test
     void loginRejectsLegacyUserWithoutPasswordWithSameMessage() {
-        ApiException exception = assertThrows(ApiException.class,
-                () -> authService.login(seed.beginner().getEmail(), "password"));
+        ApiException exception = assertThrows(ApiException.class, () -> authService.login(seed.beginner().getEmail(), "password"));
 
         assertEquals(401, exception.getCode());
         assertEquals("Invalid email or password", exception.getMessage());
     }
 
     private User registrationUser(String email, String password) {
-        User user = new User("Test User", email, 25, 180, 80, ExperienceLevel.BEGINNER, 3,
-                TrainingGoal.MUSCLE_GAIN);
+        User user = new User("Test User", email, 25, 180, 80, ExperienceLevel.BEGINNER, 3, TrainingGoal.MUSCLE_GAIN);
         user.setPassword(password);
         return user;
     }
