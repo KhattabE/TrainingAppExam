@@ -1,10 +1,40 @@
+@token = paste-token-here
+
 ### Health check
 GET http://localhost:7070/api/health
+
+
+### Register
+POST http://localhost:7070/auth/register
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "test@test.com",
+  "password": "plain-password",
+  "age": 24,
+  "height": 180,
+  "weight": 80,
+  "experienceLevel": "BEGINNER",
+  "trainingDaysPerWeek": 4,
+  "goal": "MUSCLE_GAIN"
+}
+
+
+### Login
+POST http://localhost:7070/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@test.com",
+  "password": "plain-password"
+}
 
 
 ### Ask coach
 POST http://localhost:7070/api/coach
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
   "prompt": "How long should I rest between heavy sets?"
@@ -14,6 +44,7 @@ Content-Type: application/json
 ### Ask coach with empty prompt
 POST http://localhost:7070/api/coach
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
   "prompt": ""

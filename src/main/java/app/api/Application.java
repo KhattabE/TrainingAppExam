@@ -1,16 +1,22 @@
 package app.api;
 
+import app.api.routes.AuthRoutes;
 import app.api.routes.CoachRoutes;
 import app.api.routes.ExerciseRoutes;
 import app.api.routes.UserRoutes;
 import app.api.routes.WorkoutProgramRoutes;
 import app.config.HibernateConfig;
 import app.dao.ExerciseDAOImpl;
+import app.dao.UserDAO;
 import app.dao.UserDAOImpl;
 import app.exceptions.ApiException;
 import app.services.AiCoachService;
+import app.services.AuthService;
+import app.services.JwtService;
+import app.services.PasswordService;
 import app.services.WorkoutProgramService;
 import io.javalin.Javalin;
+import io.javalin.http.Context;
 import io.javalin.http.HttpResponseException;
 import io.javalin.validation.ValidationException;
 import jakarta.persistence.EntityManagerFactory;
@@ -34,11 +40,18 @@ public class Application {
     }
 
     public static Javalin createApp(EntityManagerFactory emf, AiCoachService aiCoachService) {
-        UserController userController = new UserController(new UserDAOImpl(emf));
+        return createApp(emf, aiCoachService, new JwtService());
+    }
+
+    public static Javalin createApp(EntityManagerFactory emf, AiCoachService aiCoachService, JwtService jwtService) {
+        UserDAO userDAO = new UserDAOImpl(emf);
+        UserController userController = new UserController(userDAO);
         ExerciseController exerciseController = new ExerciseController(new ExerciseDAOImpl(emf));
         CoachController coachController = new CoachController(aiCoachService);
         WorkoutProgramService workoutProgramService = new WorkoutProgramService(emf, aiCoachService);
         WorkoutProgramController workoutProgramController = new WorkoutProgramController(workoutProgramService);
+        AuthService authService = new AuthService(userDAO, new PasswordService(), jwtService);
+        AuthController authController = new AuthController(authService);
         Javalin app = Javalin.create(config -> config.http.prefer405over404 = true);
 
         app.exception(ValidationException.class, (exception, ctx) -> {
@@ -69,13 +82,29 @@ public class Application {
         });
 
         app.before(ctx -> logger.info("{} {}", ctx.method(), ctx.path()));
+        app.before("/api/coach", ctx -> authenticate(ctx, jwtService));
         app.after(ctx -> logger.info("{} {} -> {}", ctx.method(), ctx.path(), ctx.status()));
         app.get("/api/health", ctx -> ctx.json(Map.of("status", "ok", "message", "API is running")));
 
+        new AuthRoutes(authController).register(app);
         new CoachRoutes(coachController).register(app);
         new ExerciseRoutes(exerciseController).register(app);
         new UserRoutes(userController).register(app);
         new WorkoutProgramRoutes(workoutProgramController).register(app);
         return app;
+    }
+
+    private static void authenticate(Context ctx, JwtService jwtService) {
+        String authorization = ctx.header("Authorization");
+
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            throw new ApiException(401, "Unauthorized");
+        }
+
+        String token = authorization.substring("Bearer ".length()).trim();
+
+        if (token.isEmpty() || !jwtService.validateToken(token)) {
+            throw new ApiException(401, "Unauthorized");
+        }
     }
 }

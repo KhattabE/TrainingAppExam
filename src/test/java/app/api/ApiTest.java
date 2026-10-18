@@ -6,6 +6,8 @@ import app.dao.WorkoutProgramDAOImpl;
 import app.dto.ExerciseRequestDTO;
 import app.dto.GeneratedExerciseDTO;
 import app.dto.GeneratedWorkoutProgramDTO;
+import app.dto.LoginRequestDTO;
+import app.dto.RegisterRequestDTO;
 import app.dto.UserRequestDTO;
 import app.entities.ExperienceLevel;
 import app.entities.MuscleGroup;
@@ -14,6 +16,8 @@ import app.entities.User;
 import app.entities.WorkoutProgram;
 import app.testutils.DatabaseTest;
 import app.testutils.FakeAiCoachService;
+import app.services.JwtService;
+import app.services.PasswordService;
 import io.javalin.Javalin;
 import io.restassured.http.ContentType;
 import io.restassured.specification.RequestSpecification;
@@ -31,12 +35,14 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ApiTest extends DatabaseTest {
 
+    private static final String TEST_SECRET = "test-secret-key-that-is-at-least-32-bytes-long";
     private final FakeAiCoachService ai = new FakeAiCoachService();
+    private final JwtService jwtService = new JwtService(TEST_SECRET);
     private Javalin app;
 
     @BeforeAll
     void startApi() {
-        app = Application.createApp(emf, ai).start(0);
+        app = Application.createApp(emf, ai, jwtService).start(0);
     }
 
     @BeforeEach
@@ -136,9 +142,64 @@ class ApiTest extends DatabaseTest {
 
     @Test
     void coachReturnsControlledAnswerAndReceivesPrompt() {
-        request().body(Map.of("prompt", "How should I start training?")).post("/api/coach")
+        request().header("Authorization", bearerToken()).body(Map.of("prompt", "How should I start training?"))
+                .post("/api/coach")
                 .then().statusCode(200).contentType(ContentType.JSON).body("answer", equalTo(ai.answer));
         assertEquals("How should I start training?", ai.lastPrompt);
+    }
+
+    @Test
+    void registerPersistsHashedPasswordWithoutReturningIt() {
+        RegisterRequestDTO registration = registration("register@test.dk", "plain-password");
+
+        request().body(registration).post("/auth/register").then().statusCode(201)
+                .body("id", greaterThan(0), "email", equalTo("register@test.dk"), "password", nullValue());
+
+        User stored = new UserDAOImpl(emf).getByEmail("register@test.dk");
+        assertNotNull(stored);
+        assertNotEquals("plain-password", stored.getPassword());
+        assertTrue(new PasswordService().verifyPassword("plain-password", stored.getPassword()));
+    }
+
+    @Test
+    void loginReturnsValidToken() {
+        request().body(registration("login@test.dk", "correct-password")).post("/auth/register")
+                .then().statusCode(201);
+
+        String token = request().body(new LoginRequestDTO("login@test.dk", "correct-password"))
+                .post("/auth/login").then().statusCode(200).body("token", not(blankOrNullString()))
+                .extract().path("token");
+
+        assertTrue(jwtService.validateToken(token));
+    }
+
+    @Test
+    void invalidLoginReturns401() {
+        request().body(new LoginRequestDTO("unknown@test.dk", "wrong-password")).post("/auth/login")
+                .then().statusCode(401).body("status", equalTo(401), "msg", equalTo("Invalid email or password"));
+    }
+
+    @Test
+    void protectedCoachRejectsMissingAuthorizationHeader() {
+        request().body(Map.of("prompt", "How should I start training?")).post("/api/coach")
+                .then().statusCode(401).body("status", equalTo(401), "msg", equalTo("Unauthorized"));
+        assertNull(ai.lastPrompt);
+    }
+
+    @Test
+    void protectedCoachRejectsMalformedAuthorizationHeader() {
+        request().header("Authorization", "Token abc").body(Map.of("prompt", "How should I start training?"))
+                .post("/api/coach").then().statusCode(401)
+                .body("status", equalTo(401), "msg", equalTo("Unauthorized"));
+        assertNull(ai.lastPrompt);
+    }
+
+    @Test
+    void protectedCoachRejectsInvalidToken() {
+        request().header("Authorization", "Bearer invalid-token")
+                .body(Map.of("prompt", "How should I start training?")).post("/api/coach")
+                .then().statusCode(401).body("status", equalTo(401), "msg", equalTo("Unauthorized"));
+        assertNull(ai.lastPrompt);
     }
 
     @Test
@@ -179,7 +240,8 @@ class ApiTest extends DatabaseTest {
 
     @Test
     void emptyCoachPromptReturns400() {
-        request().body(Map.of("prompt", "")).post("/api/coach").then().statusCode(400)
+        request().header("Authorization", bearerToken()).body(Map.of("prompt", "")).post("/api/coach")
+                .then().statusCode(400)
                 .body("status", equalTo(400), "msg", equalTo("Prompt cannot be empty"));
         assertNull(ai.lastPrompt);
     }
@@ -218,5 +280,14 @@ class ApiTest extends DatabaseTest {
         return new GeneratedWorkoutProgramDTO("AI Full Body", "A simple program",
                 List.of(new GeneratedExerciseDTO("Push Up", MuscleGroup.CHEST, 3, 12),
                         new GeneratedExerciseDTO("Lunge", MuscleGroup.LEGS, 3, 10)));
+    }
+
+    private RegisterRequestDTO registration(String email, String password) {
+        return new RegisterRequestDTO("Test User", email, password, 25, 180, 80, ExperienceLevel.BEGINNER, 3,
+                TrainingGoal.MUSCLE_GAIN);
+    }
+
+    private String bearerToken() {
+        return "Bearer " + jwtService.generateToken(seed.beginner());
     }
 }

@@ -2,15 +2,18 @@ package app.services;
 
 import app.dao.UserDAO;
 import app.entities.User;
+import app.exceptions.ApiException;
 
 public class AuthService {
 
     private final UserDAO userDAO;
     private final PasswordService passwordService;
+    private final JwtService jwtService;
 
-    public AuthService(UserDAO userDAO, PasswordService passwordService) {
+    public AuthService(UserDAO userDAO, PasswordService passwordService, JwtService jwtService) {
         this.userDAO = userDAO;
         this.passwordService = passwordService;
+        this.jwtService = jwtService;
     }
 
     public User register(User user) {
@@ -18,7 +21,7 @@ public class AuthService {
         User existingUser = userDAO.getByEmail(user.getEmail());
 
         if (existingUser != null) {
-            throw new RuntimeException("Email already in use");
+            throw new ApiException(409, "Email already in use");
         }
 
         String hashedPassword = passwordService.hashPassword(user.getPassword());
@@ -29,21 +32,21 @@ public class AuthService {
     }
 
 
-    public User login(String email, String password) {
+    public String login(String email, String password) {
 
         User user = userDAO.getByEmail(email);
 
-        if (user == null) {
-            throw new RuntimeException("Invalid email or password");
+        if (user == null || user.getPassword() == null || user.getPassword().isBlank()) {
+            throw new ApiException(401, "Invalid email or password");
         }
 
         boolean passwordMatches = passwordService.verifyPassword(password, user.getPassword());
 
         if (!passwordMatches) {
-            throw new RuntimeException("Invalid email or password");
+            throw new ApiException(401, "Invalid email or password");
         }
 
-        return user;
+        return jwtService.generateToken(user);
     }
 
 

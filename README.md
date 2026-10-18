@@ -11,7 +11,9 @@ http://localhost:7070
 | Method | URL | Request Body | Success Response | Errors |
 |---|---|---|---|---|
 | GET | `/api/health` | None | `200 OK` | `500 Internal Server Error` |
-| POST | `/api/coach` | Coach request | `200 OK` | `400 Bad Request`, `500 Internal Server Error`, `502 Bad Gateway`, `503 Service Unavailable` |
+| POST | `/auth/register` | Registration request | `201 Created` | `400 Bad Request`, `409 Conflict` |
+| POST | `/auth/login` | Login request | `200 OK` | `400 Bad Request`, `401 Unauthorized` |
+| POST | `/api/coach` | Coach request + Bearer token | `200 OK` | `400 Bad Request`, `401 Unauthorized`, `500 Internal Server Error`, `502 Bad Gateway`, `503 Service Unavailable` |
 | GET | `/api/exercises` | None | `200 OK` | `500 Internal Server Error` |
 | GET | `/api/exercises/{id}` | None | `200 OK` | `400 Bad Request`, `404 Not Found` |
 | POST | `/api/exercises` | Exercise request | `201 Created` | `400 Bad Request` |
@@ -34,6 +36,84 @@ All API errors, including validation failures and unknown routes, use the same J
 ```
 
 Validation can report more than one problem in `msg`. Unexpected server errors return a generic message; details are logged on the server. Invalid or unsuccessful AI responses return 502. An interrupted AI request returns 503.
+
+---
+
+# Authentication
+
+Authentication uses BCrypt password hashing and JWT tokens. `JWT_SECRET` must be set as an environment variable before starting the API. Its value must be long enough for JWT signing (at least 32 bytes) and must never be committed to Git.
+
+Registration follows this flow:
+
+```text
+plain password -> BCrypt hash -> database
+```
+
+Login and protected requests follow this flow:
+
+```text
+email + password -> credentials checked -> JWT generated
+Authorization: Bearer <token> -> JWT validation -> access
+```
+
+## Register
+
+Use this endpoint when creating an account. The older `POST /api/users` endpoint is kept for compatibility and is not an authentication registration endpoint.
+
+```http
+POST /auth/register
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "Test User",
+  "email": "test@test.com",
+  "password": "plain-password",
+  "age": 24,
+  "height": 180,
+  "weight": 80,
+  "experienceLevel": "BEGINNER",
+  "trainingDaysPerWeek": 4,
+  "goal": "MUSCLE_GAIN"
+}
+```
+
+The API returns `201 Created` with the safe user response DTO. The password and password hash are never included. A duplicate email returns `409 Conflict`.
+
+## Login
+
+```http
+POST /auth/login
+Content-Type: application/json
+```
+
+```json
+{
+  "email": "test@test.com",
+  "password": "plain-password"
+}
+```
+
+Successful login returns:
+
+```json
+{
+  "token": "eyJ..."
+}
+```
+
+Unknown emails and incorrect passwords both return `401 Unauthorized` with `Invalid email or password`.
+
+## Protected endpoint
+
+`POST /api/coach` requires the JWT returned by login:
+
+```http
+Authorization: Bearer <token>
+```
+
+Missing, malformed, expired, or invalid tokens return `401 Unauthorized`.
 
 ---
 
@@ -73,6 +153,7 @@ Sends a short fitness related question to the AI coach.
 ```http
 POST /api/coach
 Content-Type: application/json
+Authorization: Bearer <token>
 ```
 
 ```json
@@ -94,6 +175,10 @@ Content-Type: application/json
 ```
 
 ### Errors
+
+`401 Unauthorized`
+
+Returned if the Bearer token is missing, malformed, expired, or invalid.
 
 `400 Bad Request`
 
@@ -709,8 +794,10 @@ Returned if the AI request is interrupted.
 | `201 Created` | A new resource was created successfully |
 | `204 No Content` | A resource was deleted successfully |
 | `400 Bad Request` | Request data or a path parameter was invalid |
+| `401 Unauthorized` | Authentication credentials or JWT are missing or invalid |
 | `404 Not Found` | Requested resource could not be found |
 | `405 Method Not Allowed` | The requested HTTP method is not supported for this URL |
+| `409 Conflict` | An account already exists with the supplied email |
 | `500 Internal Server Error` | An unexpected server-side error occurred |
 | `502 Bad Gateway` | The AI service failed or returned unusable data |
 | `503 Service Unavailable` | The AI request was interrupted |
