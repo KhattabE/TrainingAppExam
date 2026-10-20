@@ -29,8 +29,7 @@ public class UserController {
                 .check(user -> user.goal() != null, "Training goal is required")
                 .get();
 
-        User user = new User(request.name(), request.email(), request.age(), request.height(), request.weight(),
-                request.experienceLevel(), request.trainingDaysPerWeek(), request.goal());
+        User user = new User(request.name(), request.email(), request.age(), request.height(), request.weight(), request.experienceLevel(), request.trainingDaysPerWeek(), request.goal());
 
         User savedUser = userDAO.create(user);
 

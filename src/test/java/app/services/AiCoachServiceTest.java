@@ -81,7 +81,6 @@ class AiCoachServiceTest {
     }
 
     private String geminiResponse(String answer) throws IOException {
-        return mapper.writeValueAsString(Map.of("candidates",
-                List.of(Map.of("content", Map.of("parts", List.of(Map.of("text", answer)))))));
+        return mapper.writeValueAsString(Map.of("candidates", List.of(Map.of("content", Map.of("parts", List.of(Map.of("text", answer)))))));
     }
 }
