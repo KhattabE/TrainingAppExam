@@ -1,6 +1,6 @@
 
 # Java 17
-FROM amazoncorretto:17-alpine
+FROM eclipse-temurin:25-jre
 
 # Installer curl
 RUN apk update && apk add --no-cache curl
