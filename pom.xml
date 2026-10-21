@@ -2,6 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>app</groupId>
@@ -12,6 +13,7 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
         <lombok.version>1.18.42</lombok.version>
         <hibernate-version>7.2.3.Final</hibernate-version>
         <junit.version>6.0.2</junit.version>
@@ -39,12 +41,13 @@
             <version>6.5.0</version>
         </dependency>
 
-        <!--  DB    -->
+        <!-- DATABASE -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <version>${postgres.version}</version>
         </dependency>
+
         <dependency>
             <groupId>org.hibernate.orm</groupId>
             <artifactId>hibernate-core</artifactId>
@@ -57,7 +60,7 @@
             <version>${hibernate-version}</version>
         </dependency>
 
-        <!--  LOMBOK    -->
+        <!-- LOMBOK -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -65,13 +68,14 @@
             <scope>provided</scope>
         </dependency>
 
-        <!--  TESTING      -->
+        <!-- TESTING -->
         <dependency>
             <groupId>io.rest-assured</groupId>
             <artifactId>rest-assured</artifactId>
             <version>${rest-assured.version}</version>
             <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
@@ -106,18 +110,21 @@
             <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers-postgresql</artifactId>
             <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers-jdbc</artifactId>
             <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers-junit-jupiter</artifactId>
@@ -125,20 +132,20 @@
             <scope>test</scope>
         </dependency>
 
-        <!--  Logging   -->
-
+        <!-- LOGGING -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>${logback-classic}</version>
         </dependency>
+
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>${org.slf4j}</version>
         </dependency>
 
-
+        <!-- PASSWORD HASHING -->
         <dependency>
             <groupId>org.mindrot</groupId>
             <artifactId>jbcrypt</artifactId>
@@ -166,16 +173,59 @@
             <scope>runtime</scope>
         </dependency>
 
-
     </dependencies>
 
     <build>
+        <finalName>app</finalName>
+
         <plugins>
+
+            <!-- MAVEN SHADE PLUGIN -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.1</version>
+
+                <configuration>
+                    <outputFile>${project.build.directory}/app.jar</outputFile>
+
+                    <transformers>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                            <mainClass>app.Main</mainClass>
+                        </transformer>
+                    </transformers>
+
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>module-info.class</exclude>
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                </configuration>
+
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- MAVEN SUREFIRE PLUGIN -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.4</version>
             </plugin>
+
         </plugins>
     </build>
+
 </project>
