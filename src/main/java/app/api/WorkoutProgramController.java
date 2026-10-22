@@ -1,9 +1,13 @@
 
 package app.api;
 
+import app.dao.UserDAO;
 import app.dto.ExerciseResponseDTO;
 import app.dto.WorkoutProgramResponseDTO;
+import app.entities.User;
 import app.entities.WorkoutProgram;
+import app.exceptions.ApiException;
+import app.services.JwtService;
 import app.services.WorkoutProgramService;
 import io.javalin.http.Context;
 
@@ -13,35 +17,82 @@ import java.util.List;
 public class WorkoutProgramController {
 
     private final WorkoutProgramService workoutProgramService;
+    private final UserDAO userDAO;
+    private final JwtService jwtService;
 
-    public WorkoutProgramController(WorkoutProgramService workoutProgramService) {
+    public WorkoutProgramController(WorkoutProgramService workoutProgramService, UserDAO userDAO, JwtService jwtService) {
+
         this.workoutProgramService = workoutProgramService;
+        this.userDAO = userDAO;
+        this.jwtService = jwtService;
     }
 
-    public void generateForUser(Context ctx) throws IOException, InterruptedException {
+    public void generateForUser(Context ctx)
+            throws IOException, InterruptedException {
+
         int userId = ctx.pathParamAsClass("id", Integer.class)
                 .check(id -> id > 0, "User id must be greater than 0")
                 .get();
 
-        WorkoutProgram workoutProgram = workoutProgramService.generateForUser(userId);
+        verifyOwnership(ctx, userId);
+
+        WorkoutProgram workoutProgram =
+                workoutProgramService.generateForUser(userId);
 
         ctx.status(201).json(toResponse(workoutProgram));
     }
 
     public void getForUser(Context ctx) {
+
         int userId = ctx.pathParamAsClass("id", Integer.class)
                 .check(id -> id > 0, "User id must be greater than 0")
                 .get();
 
-        WorkoutProgram workoutProgram = workoutProgramService.getForUser(userId);
+        verifyOwnership(ctx, userId);
+
+        WorkoutProgram workoutProgram =
+                workoutProgramService.getForUser(userId);
 
         ctx.status(200).json(toResponse(workoutProgram));
     }
 
-    private WorkoutProgramResponseDTO toResponse(WorkoutProgram workoutProgram) {
-        List<ExerciseResponseDTO> exercises = workoutProgram.getExercises().stream()
-                .map(exercise -> new ExerciseResponseDTO(exercise.getId(), exercise.getName(), exercise.getMuscleGroup(), exercise.getSets(), exercise.getReps()))
-                .toList();
+    private void verifyOwnership(Context ctx, int requestedUserId) {
+
+        String authorization = ctx.header("Authorization");
+
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            throw new ApiException(401, "Unauthorized");
+        }
+
+        String token = authorization.substring(7).trim();
+
+        if (!jwtService.validateToken(token)) {
+            throw new ApiException(401, "Unauthorized");
+        }
+
+        String email = jwtService.getEmailFromToken(token);
+
+        User loggedInUser = userDAO.getByEmail(email);
+
+        if (loggedInUser == null) {
+            throw new ApiException(401, "Unauthorized");
+        }
+
+        if (loggedInUser.getId() != requestedUserId) {
+            throw new ApiException(
+                    403,
+                    "You cannot access another user's workout program"
+            );
+        }
+    }
+
+    private WorkoutProgramResponseDTO toResponse(
+            WorkoutProgram workoutProgram) {
+
+        List<ExerciseResponseDTO> exercises =
+                workoutProgram.getExercises().stream()
+                        .map(exercise -> new ExerciseResponseDTO(exercise.getId(), exercise.getName(), exercise.getMuscleGroup(), exercise.getSets(), exercise.getReps()))
+                        .toList();
 
         return new WorkoutProgramResponseDTO(workoutProgram.getId(), workoutProgram.getName(), workoutProgram.getDescription(), workoutProgram.getTrainingDaysPerWeek(), exercises);
     }

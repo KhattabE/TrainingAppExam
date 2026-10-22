@@ -1,3 +1,4 @@
+
 package app.services;
 
 import app.entities.User;
@@ -44,8 +45,18 @@ public class JwtService {
                     .parseSignedClaims(token);
 
             return true;
+
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
+    }
+
+    public String getEmailFromToken(String token) {
+        return Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .getSubject();
     }
 }
