@@ -13,5 +13,6 @@ public class WorkoutProgramRoutes {
 
     public void register(Javalin app) {
         app.post("/api/users/{id}/workout-program", controller::generateForUser);
+        app.get("/api/users/{id}/workout-program", controller::getForUser);
     }
 }

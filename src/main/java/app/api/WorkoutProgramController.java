@@ -1,3 +1,4 @@
+
 package app.api;
 
 import app.dto.ExerciseResponseDTO;
@@ -21,16 +22,27 @@ public class WorkoutProgramController {
         int userId = ctx.pathParamAsClass("id", Integer.class)
                 .check(id -> id > 0, "User id must be greater than 0")
                 .get();
+
         WorkoutProgram workoutProgram = workoutProgramService.generateForUser(userId);
+
         ctx.status(201).json(toResponse(workoutProgram));
+    }
+
+    public void getForUser(Context ctx) {
+        int userId = ctx.pathParamAsClass("id", Integer.class)
+                .check(id -> id > 0, "User id must be greater than 0")
+                .get();
+
+        WorkoutProgram workoutProgram = workoutProgramService.getForUser(userId);
+
+        ctx.status(200).json(toResponse(workoutProgram));
     }
 
     private WorkoutProgramResponseDTO toResponse(WorkoutProgram workoutProgram) {
         List<ExerciseResponseDTO> exercises = workoutProgram.getExercises().stream()
-                .map(exercise -> new ExerciseResponseDTO(exercise.getId(), exercise.getName(),
-                        exercise.getMuscleGroup(), exercise.getSets(), exercise.getReps()))
+                .map(exercise -> new ExerciseResponseDTO(exercise.getId(), exercise.getName(), exercise.getMuscleGroup(), exercise.getSets(), exercise.getReps()))
                 .toList();
-        return new WorkoutProgramResponseDTO(workoutProgram.getId(), workoutProgram.getName(),
-                workoutProgram.getDescription(), workoutProgram.getTrainingDaysPerWeek(), exercises);
+
+        return new WorkoutProgramResponseDTO(workoutProgram.getId(), workoutProgram.getName(), workoutProgram.getDescription(), workoutProgram.getTrainingDaysPerWeek(), exercises);
     }
 }
