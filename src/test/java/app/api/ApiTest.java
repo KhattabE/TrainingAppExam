@@ -4,12 +4,10 @@ package app.api;
 import app.dao.ExerciseDAOImpl;
 import app.dao.UserDAOImpl;
 import app.dao.WorkoutProgramDAOImpl;
-import app.dto.ExerciseRequestDTO;
 import app.dto.GeneratedExerciseDTO;
 import app.dto.GeneratedWorkoutProgramDTO;
 import app.dto.LoginRequestDTO;
 import app.dto.RegisterRequestDTO;
-import app.dto.UserRequestDTO;
 import app.entities.ExperienceLevel;
 import app.entities.MuscleGroup;
 import app.entities.TrainingGoal;
@@ -100,83 +98,54 @@ class ApiTest extends DatabaseTest {
     }
 
     @Test
-    void createExercisePersistsAndCanBeRead() {
-        ExerciseRequestDTO exercise =
-                new ExerciseRequestDTO("Curl", MuscleGroup.BICEPS, 3, 12);
-
-        int id = request()
-                .body(exercise)
+    void createExerciseRouteIsNotAvailable() {
+        request()
                 .post("/api/exercises")
-                .then().statusCode(201)
-                .body("id", greaterThan(0),
-                        "name", equalTo("Curl"),
-                        "muscleGroup", equalTo("BICEPS"))
-                .extract().path("id");
-
-        request().get("/api/exercises/" + id)
-                .then().statusCode(200)
-                .body("sets", equalTo(3),
-                        "reps", equalTo(12));
-
-        assertEquals("Curl", new ExerciseDAOImpl(emf).getById(id).getName());
+                .then().statusCode(405);
     }
 
     @Test
-    void updateExercisePersistsAllChangedFields() {
-        ExerciseRequestDTO exercise =
-                new ExerciseRequestDTO("Incline Bench Press", MuscleGroup.CHEST, 4, 8);
-
-        int id = seed.benchPress().getId();
-
-        request().body(exercise)
-                .put("/api/exercises/" + id)
-                .then().statusCode(200)
-                .body("id", equalTo(id),
-                        "name", equalTo("Incline Bench Press"),
-                        "sets", equalTo(4),
-                        "reps", equalTo(8));
-
-        assertEquals(4, new ExerciseDAOImpl(emf).getById(id).getSets());
+    void updateExerciseRouteIsNotAvailable() {
+        request()
+                .put("/api/exercises/" + seed.benchPress().getId())
+                .then().statusCode(405);
     }
 
     @Test
-    void deleteExerciseReturnsEmptyBodyAndRemovesRecord() {
-        int id = request()
-                .body(new ExerciseRequestDTO("Curl", MuscleGroup.BICEPS, 3, 12))
-                .post("/api/exercises")
-                .then().statusCode(201)
-                .extract().path("id");
-
-        request().delete("/api/exercises/" + id)
-                .then().statusCode(204)
-                .body(isEmptyString());
-
-        assertNull(new ExerciseDAOImpl(emf).getById(id));
-
-        request().get("/api/exercises/" + id)
-                .then().statusCode(404)
-                .body("status", equalTo(404));
+    void deleteExerciseRouteIsNotAvailable() {
+        request()
+                .delete("/api/exercises/" + seed.benchPress().getId())
+                .then().statusCode(405);
     }
 
     @Test
-    void listUsersReturnsSeededDtosAndProgramId() {
-        request().get("/api/users")
+    void currentUserRejectsMissingToken() {
+        request()
+                .get("/api/users/me")
+                .then().statusCode(401)
+                .body("status", equalTo(401),
+                        "msg", equalTo("Unauthorized"));
+    }
+
+    @Test
+    void currentUserRejectsInvalidToken() {
+        request()
+                .header("Authorization", "Bearer invalid-token")
+                .get("/api/users/me")
+                .then().statusCode(401)
+                .body("status", equalTo(401),
+                        "msg", equalTo("Unauthorized"));
+    }
+
+    @Test
+    void currentUserReturnsOwnProfileWithoutPassword() {
+        request()
+                .header("Authorization", bearerToken())
+                .get("/api/users/me")
                 .then().statusCode(200)
                 .contentType(ContentType.JSON)
-                .body("id", containsInAnyOrder(
-                                seed.beginner().getId(),
-                                seed.advanced().getId()),
-                        "find { it.name == 'Anna' }.workoutProgramId",
-                        equalTo(seed.fullBody().getId()),
-                        "find { it.name == 'Omar' }.workoutProgramId",
-                        nullValue());
-    }
-
-    @Test
-    void getUserReturnsProfileAndProgramId() {
-        request().get("/api/users/" + seed.beginner().getId())
-                .then().statusCode(200)
-                .body("name", equalTo("Anna"),
+                .body("id", equalTo(seed.beginner().getId()),
+                        "name", equalTo("Anna"),
                         "email", equalTo("anna@test.dk"),
                         "age", equalTo(25),
                         "height", equalTo(170f),
@@ -184,32 +153,23 @@ class ApiTest extends DatabaseTest {
                         "experienceLevel", equalTo("BEGINNER"),
                         "trainingDaysPerWeek", equalTo(3),
                         "goal", equalTo("MUSCLE_GAIN"),
-                        "workoutProgramId", equalTo(seed.fullBody().getId()));
+                        "workoutProgramId", equalTo(seed.fullBody().getId()),
+                        "$", not(hasKey("password")));
     }
 
     @Test
-    void createUserPersistsProfileAndCanBeRead() {
-        UserRequestDTO user = new UserRequestDTO(
-                "Mia", "mia@test.dk", 24, 165, 60,
-                ExperienceLevel.INTERMEDIATE, 2,
-                TrainingGoal.GENERAL_FITNESS
-        );
+    void oldUserRoutesAreNotAvailable() {
+        request()
+                .get("/api/users")
+                .then().statusCode(404);
 
-        int id = request().body(user)
+        request()
+                .get("/api/users/" + seed.beginner().getId())
+                .then().statusCode(404);
+
+        request()
                 .post("/api/users")
-                .then().statusCode(201)
-                .body("id", greaterThan(0),
-                        "name", equalTo("Mia"),
-                        "workoutProgramId", nullValue())
-                .extract().path("id");
-
-        request().get("/api/users/" + id)
-                .then().statusCode(200)
-                .body("email", equalTo("mia@test.dk"),
-                        "goal", equalTo("GENERAL_FITNESS"));
-
-        assertEquals(2, new UserDAOImpl(emf)
-                .getById(id).getTrainingDaysPerWeek());
+                .then().statusCode(404);
     }
 
     @Test
@@ -329,8 +289,7 @@ class ApiTest extends DatabaseTest {
                 .extract().path("id");
 
         User user = new UserDAOImpl(emf).getById(userId);
-        WorkoutProgram program =
-                new WorkoutProgramDAOImpl(emf).getById(programId);
+        WorkoutProgram program = new WorkoutProgramDAOImpl(emf).getById(programId);
 
         assertEquals(programId, user.getWorkoutProgram().getId());
         assertEquals(2, program.getExercises().size());
@@ -339,35 +298,19 @@ class ApiTest extends DatabaseTest {
         assertEquals(userId, ai.lastUser.getId());
         assertEquals(TrainingGoal.MUSCLE_GAIN, ai.lastUser.getGoal());
 
-        request().get("/api/users/" + userId)
+        request()
+                .header("Authorization", bearerToken())
+                .get("/api/users/me")
                 .then().statusCode(200)
                 .body("workoutProgramId", equalTo(programId));
     }
 
     @Test
-    void invalidExerciseReturns400WithoutSaving() {
-        ExerciseRequestDTO exercise =
-                new ExerciseRequestDTO("Curl", MuscleGroup.BICEPS, 0, 12);
+    void tooManyTrainingDaysReturns400WithoutRegisteringUser() {
+        RegisterRequestDTO registration = new RegisterRequestDTO("Mia", "mia@test.dk", "password", 24, 165, 60, ExperienceLevel.BEGINNER, 8, TrainingGoal.MUSCLE_GAIN);
 
-        request().body(exercise)
-                .post("/api/exercises")
-                .then().statusCode(400)
-                .body("status", equalTo(400),
-                        "msg", containsString("Sets"));
-
-        assertEquals(2, new ExerciseDAOImpl(emf).getAll().size());
-    }
-
-    @Test
-    void tooManyTrainingDaysReturns400WithoutSavingUser() {
-        UserRequestDTO user = new UserRequestDTO(
-                "Mia", "mia@test.dk", 24, 165, 60,
-                ExperienceLevel.BEGINNER, 8,
-                TrainingGoal.MUSCLE_GAIN
-        );
-
-        request().body(user)
-                .post("/api/users")
+        request().body(registration)
+                .post("/auth/register")
                 .then().statusCode(400)
                 .body("status", equalTo(400),
                         "msg", containsString("Training days"));

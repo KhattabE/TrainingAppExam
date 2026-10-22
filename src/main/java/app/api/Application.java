@@ -101,10 +101,10 @@ public class Application {
 
         app.before(ctx -> logger.info("{} {}", ctx.method(), ctx.path()));
 
-        // JWT authentication for AI coach
         app.before("/api/coach", ctx -> authenticate(ctx, jwtService));
 
-        // JWT authentication for workout programs
+        app.before("/api/users/me", ctx -> authenticate(ctx, jwtService));
+
         app.before("/api/users/{id}/workout-program",
                 ctx -> authenticate(ctx, jwtService));
 
@@ -133,5 +133,7 @@ public class Application {
         if (token.isEmpty() || !jwtService.validateToken(token)) {
             throw new ApiException(401, "Unauthorized");
         }
+
+        ctx.attribute("userEmail", jwtService.getEmailFromToken(token));
     }
 }
