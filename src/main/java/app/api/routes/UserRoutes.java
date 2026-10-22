@@ -12,8 +12,6 @@ public class UserRoutes {
     }
 
     public void register(Javalin app) {
-        app.post("/api/users", controller::create);
-        app.get("/api/users", controller::getAll);
-        app.get("/api/users/{id}", controller::getById);
+        app.get("/api/users/me", controller::getCurrentUser);
     }
 }

@@ -14,8 +14,5 @@ public class ExerciseRoutes {
     public void register(Javalin app) {
         app.get("/api/exercises", controller::getAll);
         app.get("/api/exercises/{id}", controller::getById);
-        app.post("/api/exercises", controller::create);
-        app.put("/api/exercises/{id}", controller::update);
-        app.delete("/api/exercises/{id}", controller::delete);
     }
 }
