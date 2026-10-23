@@ -1,17 +1,27 @@
-@token = paste-token-here
+@baseUrl = http://localhost:7070
+@email = test@test.com
+@password = plain-password
+@notFoundId = 2147483647
+@otherUserId = 2147483647
+
+# Run Login before protected requests.
+# Run Get current user before workout-program requests.
+# Change the email when registering a new user. Reusing an email returns 409.
 
 ### Health check
-GET http://localhost:7070/api/health
+GET {{baseUrl}}/api/health
+Accept: application/json
 
 
 ### Register
-POST http://localhost:7070/auth/register
+POST {{baseUrl}}/auth/register
 Content-Type: application/json
+Accept: application/json
 
 {
   "name": "Test User",
-  "email": "test@test.com",
-  "password": "plain-password",
+  "email": "{{email}}",
+  "password": "{{password}}",
   "age": 24,
   "height": 180,
   "weight": 80,
@@ -21,111 +31,152 @@ Content-Type: application/json
 }
 
 
-### Login
-POST http://localhost:7070/auth/login
+### Login and save the JWT
+POST {{baseUrl}}/auth/login
 Content-Type: application/json
+Accept: application/json
 
 {
-  "email": "test@test.com",
-  "password": "plain-password"
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+> {%
+  client.global.set("token", response.body.token);
+%}
+
+
+### Get the current user and save the user id
+GET {{baseUrl}}/api/users/me
+Authorization: Bearer {{token}}
+Accept: application/json
+
+> {%
+  client.global.set("userId", response.body.id);
+%}
+
+
+### Update the current user
+PUT {{baseUrl}}/api/users/me
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Updated Test User",
+  "age": 25,
+  "height": 181,
+  "weight": 79,
+  "experienceLevel": "INTERMEDIATE",
+  "trainingDaysPerWeek": 4,
+  "goal": "STRENGTH"
 }
 
 
-### Ask coach
-POST http://localhost:7070/api/coach
-Content-Type: application/json
+### Ask the AI coach
+POST {{baseUrl}}/api/coach
 Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
 
 {
   "prompt": "How long should I rest between heavy sets?"
 }
 
 
-### Ask coach with empty prompt
-POST http://localhost:7070/api/coach
-Content-Type: application/json
+### Generate a workout program and save one generated exercise id
+POST {{baseUrl}}/api/users/{{userId}}/workout-program
 Authorization: Bearer {{token}}
+Accept: application/json
+
+> {%
+  if (response.body.exercises && response.body.exercises.length > 0) {
+    client.global.set("exerciseId", response.body.exercises[0].id);
+  }
+%}
+
+
+### Get the current user's saved workout program
+GET {{baseUrl}}/api/users/{{userId}}/workout-program
+Authorization: Bearer {{token}}
+Accept: application/json
+
+
+### Get all exercises
+GET {{baseUrl}}/api/exercises
+Accept: application/json
+
+
+### Get the generated exercise by id
+GET {{baseUrl}}/api/exercises/{{exerciseId}}
+Accept: application/json
+
+
+### Missing JWT returns 401
+GET {{baseUrl}}/api/users/me
+Accept: application/json
+
+
+### Invalid JWT returns 401
+GET {{baseUrl}}/api/users/me
+Authorization: Bearer not-a-valid-token
+Accept: application/json
+
+
+### Another user's workout program returns 403
+GET {{baseUrl}}/api/users/{{otherUserId}}/workout-program
+Authorization: Bearer {{token}}
+Accept: application/json
+
+
+### Protected profile fields cannot be changed and return 400
+PUT {{baseUrl}}/api/users/me
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Updated Test User",
+  "email": "attacker@example.com",
+  "password": "new-password",
+  "age": 25,
+  "height": 181,
+  "weight": 79,
+  "experienceLevel": "INTERMEDIATE",
+  "trainingDaysPerWeek": 4,
+  "goal": "STRENGTH"
+}
+
+
+### Empty coach prompt returns 400
+POST {{baseUrl}}/api/coach
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
 
 {
   "prompt": ""
 }
 
 
-### Create exercise
-POST http://localhost:7070/api/exercises
+### Invalid exercise id returns 400
+GET {{baseUrl}}/api/exercises/0
+Accept: application/json
+
+
+### Missing exercise returns 404
+GET {{baseUrl}}/api/exercises/{{notFoundId}}
+Accept: application/json
+
+
+### Exercise write route is removed and returns 405
+POST {{baseUrl}}/api/exercises
 Content-Type: application/json
+Accept: application/json
 
-{
-  "name": "Bench Press",
-  "muscleGroup": "CHEST",
-  "sets": 4,
-  "reps": 8
-}
+{}
 
 
-### Get all exercises
-GET http://localhost:7070/api/exercises
-
-
-### Get exercise by id
-GET http://localhost:7070/api/exercises/3
-
-
-### Update exercise
-PUT http://localhost:7070/api/exercises/3
-Content-Type: application/json
-
-{
-  "name": "Barbell Bench Press",
-  "muscleGroup": "CHEST",
-  "sets": 5,
-  "reps": 5
-}
-
-
-### Delete exercise
-DELETE http://localhost:7070/api/exercises/3
-
-
-### Get exercise that does not exist
-GET http://localhost:7070/api/exercises/999999
-
-
-### Get exercise with invalid id
-GET http://localhost:7070/api/exercises/0
-
-
-### Create user
-POST http://localhost:7070/api/users
-Content-Type: application/json
-
-{
-  "name": "Test User",
-  "email": "test@test.com",
-  "age": 24,
-  "height": 180,
-  "weight": 80,
-  "experienceLevel": "BEGINNER",
-  "trainingDaysPerWeek": 4,
-  "goal": "MUSCLE_GAIN"
-}
-
-
-### Get all users
-GET http://localhost:7070/api/users
-
-
-### Get user by id
-GET http://localhost:7070/api/users/3
-
-
-### Get user that does not exist
-GET http://localhost:7070/api/users/999999
-
-
-### Generate workout program for user
-POST http://localhost:7070/api/users/3/workout-program
-
-
-### Check user after workout program generation
-GET http://localhost:7070/api/users/3
+### Public user list is removed and returns 404
+GET {{baseUrl}}/api/users
+Accept: application/json

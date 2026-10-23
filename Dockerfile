@@ -1,5 +1,3 @@
-
-# Java 17
 FROM eclipse-temurin:25-jre
 
 # Installer curl

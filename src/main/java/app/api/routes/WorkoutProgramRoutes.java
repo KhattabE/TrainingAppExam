@@ -1,7 +1,7 @@
 package app.api.routes;
 
 import app.api.WorkoutProgramController;
-import io.javalin.Javalin;
+import io.javalin.config.RoutesConfig;
 
 public class WorkoutProgramRoutes {
 
@@ -11,8 +11,8 @@ public class WorkoutProgramRoutes {
         this.controller = controller;
     }
 
-    public void register(Javalin app) {
-        app.post("/api/users/{id}/workout-program", controller::generateForUser);
-        app.get("/api/users/{id}/workout-program", controller::getForUser);
+    public void register(RoutesConfig routes) {
+        routes.post("/api/users/{id}/workout-program", controller::generateForUser);
+        routes.get("/api/users/{id}/workout-program", controller::getForUser);
     }
 }

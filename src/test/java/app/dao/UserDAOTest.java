@@ -4,6 +4,7 @@ import app.entities.ExperienceLevel;
 import app.entities.TrainingGoal;
 import app.entities.User;
 import app.testutils.DatabaseTest;
+import jakarta.persistence.PersistenceException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -23,6 +24,7 @@ class UserDAOTest extends DatabaseTest {
     @Test
     void createAndReadUser() {
         User user = new User("Mia", "mia@test.dk", 24, 165, 60, ExperienceLevel.INTERMEDIATE, 2, TrainingGoal.GENERAL_FITNESS);
+        user.setPassword("test-password");
         User saved = userDAO.create(user);
         User found = userDAO.getById(saved.getId());
         assertTrue(saved.getId() > 0);
@@ -35,6 +37,32 @@ class UserDAOTest extends DatabaseTest {
         assertEquals(2, found.getTrainingDaysPerWeek());
         assertEquals(TrainingGoal.GENERAL_FITNESS, found.getGoal());
         assertNull(found.getWorkoutProgram());
+    }
+
+    @Test
+    void duplicateEmailIsRejectedByDatabase() {
+        User user = new User("Duplicate", seed.beginner().getEmail(), 25, 170, 65, ExperienceLevel.BEGINNER, 3, TrainingGoal.MUSCLE_GAIN);
+        user.setPassword("test-password");
+
+        assertThrows(PersistenceException.class, () -> userDAO.create(user));
+    }
+
+    @Test
+    void nullPasswordIsRejectedByDatabase() {
+        User user = new User("No Password", "no-password@test.dk", 25, 170, 65, ExperienceLevel.BEGINNER, 3, TrainingGoal.MUSCLE_GAIN);
+
+        assertThrows(PersistenceException.class, () -> userDAO.create(user));
+    }
+
+    @Test
+    void emailLookupFindsLegacyCaseAndWhitespaceVariant() {
+        User legacyUser = new User("Legacy", "  LEGACY@Test.DK ", 25, 170, 65, ExperienceLevel.BEGINNER, 3, TrainingGoal.MUSCLE_GAIN);
+        legacyUser.setPassword("test-password");
+        userDAO.create(legacyUser);
+
+        User found = userDAO.getByEmail("legacy@test.dk");
+
+        assertEquals(legacyUser.getId(), found.getId());
     }
 
     @Test
@@ -55,6 +83,21 @@ class UserDAOTest extends DatabaseTest {
         assertEquals("Anna Updated", found.getName());
         assertEquals(67, found.getWeight());
         assertEquals(seed.fullBody().getId(), found.getWorkoutProgram().getId());
+    }
+
+    @Test
+    void profileUpdatePreservesAWorkoutProgramChangedAfterTheProfileWasRead() {
+        User profile = userDAO.getById(seed.beginner().getId());
+        User userWithNewProgram = userDAO.getById(seed.beginner().getId());
+        userWithNewProgram.setWorkoutProgram(seed.upperBody());
+        userDAO.update(userWithNewProgram);
+        profile.setName("Anna Updated");
+
+        userDAO.updateProfile(profile);
+
+        User found = userDAO.getById(profile.getId());
+        assertEquals("Anna Updated", found.getName());
+        assertEquals(seed.upperBody().getId(), found.getWorkoutProgram().getId());
     }
 
     @Test

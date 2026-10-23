@@ -38,16 +38,24 @@ public class JwtService {
     }
 
     public boolean validateToken(String token) {
+        return validateAndGetEmail(token) != null;
+    }
+
+    public String validateAndGetEmail(String token) {
+        if (token == null || token.isBlank()) {
+            return null;
+        }
+
         try {
-            Jwts.parser()
-                    .verifyWith(key)
-                    .build()
-                    .parseSignedClaims(token);
+            String email = getEmailFromToken(token);
 
-            return true;
+            if (email == null || email.isBlank()) {
+                return null;
+            }
 
+            return email;
         } catch (JwtException | IllegalArgumentException e) {
-            return false;
+            return null;
         }
     }
 

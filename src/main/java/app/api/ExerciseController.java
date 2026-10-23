@@ -3,6 +3,7 @@ package app.api;
 import app.dao.ExerciseDAO;
 import app.dto.ExerciseResponseDTO;
 import app.entities.Exercise;
+import app.exceptions.ApiException;
 import io.javalin.http.Context;
 
 import java.util.List;
@@ -30,9 +31,7 @@ public class ExerciseController {
         Exercise exercise = exerciseDAO.getById(id);
 
         if (exercise == null) {
-            ctx.status(404);
-            ctx.json(new ErrorResponse(404, "Exercise not found"));
-            return;
+            throw new ApiException(404, "Exercise not found");
         }
 
         ctx.status(200);
@@ -42,6 +41,7 @@ public class ExerciseController {
     private int getId(Context ctx) {
         return ctx.pathParamAsClass("id", Integer.class)
                 .check(id -> id > 0, "Id must be greater than 0")
+                .required()
                 .get();
     }
 

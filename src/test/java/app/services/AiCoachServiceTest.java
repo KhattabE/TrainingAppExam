@@ -33,10 +33,11 @@ class AiCoachServiceTest {
     void setUp() throws IOException {
         responseStatus = 200;
         responseBody = geminiResponse("Start with three sessions.");
-        fakeGemini = Javalin.create();
-        fakeGemini.post("/generate", ctx -> {
-            requestBody = ctx.body();
-            ctx.status(responseStatus).contentType("application/json").result(responseBody);
+        fakeGemini = Javalin.create(config -> {
+            config.routes.post("/generate", ctx -> {
+                requestBody = ctx.body();
+                ctx.status(responseStatus).contentType("application/json").result(responseBody);
+            });
         });
         fakeGemini.start(0);
         URI apiUrl = URI.create("http://localhost:" + fakeGemini.port() + "/generate");

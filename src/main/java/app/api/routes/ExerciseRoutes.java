@@ -1,7 +1,7 @@
 package app.api.routes;
 
 import app.api.ExerciseController;
-import io.javalin.Javalin;
+import io.javalin.config.RoutesConfig;
 
 public class ExerciseRoutes {
 
@@ -11,8 +11,8 @@ public class ExerciseRoutes {
         this.controller = controller;
     }
 
-    public void register(Javalin app) {
-        app.get("/api/exercises", controller::getAll);
-        app.get("/api/exercises/{id}", controller::getById);
+    public void register(RoutesConfig routes) {
+        routes.get("/api/exercises", controller::getAll);
+        routes.get("/api/exercises/{id}", controller::getById);
     }
 }

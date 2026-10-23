@@ -1,7 +1,7 @@
 package app.api.routes;
 
 import app.api.CoachController;
-import io.javalin.Javalin;
+import io.javalin.config.RoutesConfig;
 
 public class CoachRoutes {
 
@@ -11,7 +11,7 @@ public class CoachRoutes {
         this.controller = controller;
     }
 
-    public void register(Javalin app) {
-        app.post("/api/coach", controller::ask);
+    public void register(RoutesConfig routes) {
+        routes.post("/api/coach", controller::ask);
     }
 }

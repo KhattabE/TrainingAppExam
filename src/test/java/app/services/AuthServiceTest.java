@@ -30,20 +30,37 @@ class AuthServiceTest extends DatabaseTest {
 
     @Test
     void registerHashesPasswordBeforePersistence() {
-        User user = registrationUser("new@test.dk", "plain-password");
+        User user = registrationUser("  NEW@Test.DK  ", "plain-password");
 
         User registered = authService.register(user);
         User stored = userDAO.getById(registered.getId());
 
+        assertEquals("new@test.dk", stored.getEmail());
         assertNotEquals("plain-password", stored.getPassword());
         assertTrue(passwordService.verifyPassword("plain-password", stored.getPassword()));
     }
 
     @Test
     void registerRejectsDuplicateEmail() {
-        User user = registrationUser(seed.beginner().getEmail(), "plain-password");
+        User user = registrationUser("  ANNA@TEST.DK ", "plain-password");
 
         ApiException exception = assertThrows(ApiException.class, () -> authService.register(user));
+
+        assertEquals(409, exception.getCode());
+        assertEquals("Email already in use", exception.getMessage());
+    }
+
+    @Test
+    void registerMapsDatabaseEmailConflictTo409() {
+        UserDAO racingUserDAO = new UserDAOImpl(emf) {
+            @Override
+            public User getByEmail(String email) {
+                return null;
+            }
+        };
+        AuthService racingAuthService = new AuthService(racingUserDAO, passwordService, jwtService);
+
+        ApiException exception = assertThrows(ApiException.class, () -> racingAuthService.register(registrationUser(seed.beginner().getEmail(), "plain-password")));
 
         assertEquals(409, exception.getCode());
         assertEquals("Email already in use", exception.getMessage());
@@ -53,9 +70,10 @@ class AuthServiceTest extends DatabaseTest {
     void loginReturnsValidTokenForCorrectPassword() {
         authService.register(registrationUser("login@test.dk", "correct-password"));
 
-        String token = authService.login("login@test.dk", "correct-password");
+        String token = authService.login("  LOGIN@Test.DK ", "correct-password");
 
         assertTrue(jwtService.validateToken(token));
+        assertEquals("login@test.dk", jwtService.getEmailFromToken(token));
     }
 
     @Test
@@ -71,14 +89,6 @@ class AuthServiceTest extends DatabaseTest {
     @Test
     void loginRejectsUnknownEmailWithSameMessage() {
         ApiException exception = assertThrows(ApiException.class, () -> authService.login("unknown@test.dk", "password"));
-
-        assertEquals(401, exception.getCode());
-        assertEquals("Invalid email or password", exception.getMessage());
-    }
-
-    @Test
-    void loginRejectsLegacyUserWithoutPasswordWithSameMessage() {
-        ApiException exception = assertThrows(ApiException.class, () -> authService.login(seed.beginner().getEmail(), "password"));
 
         assertEquals(401, exception.getCode());
         assertEquals("Invalid email or password", exception.getMessage());

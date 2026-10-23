@@ -62,4 +62,15 @@ class JwtServiceTest {
 
         assertFalse(jwtService.validateToken(expiredToken));
     }
+
+    @Test
+    void validateToken_shouldReturnFalseForTokenWithoutEmail() {
+        String token = Jwts.builder()
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + 60_000))
+                .signWith(Keys.hmacShaKeyFor(TEST_SECRET.getBytes(StandardCharsets.UTF_8)))
+                .compact();
+
+        assertFalse(jwtService.validateToken(token));
+    }
 }
