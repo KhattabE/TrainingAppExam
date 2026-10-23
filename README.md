@@ -11,6 +11,7 @@ TrainingAppExam is a backend REST API that helps users create a fitness profile,
 Project team and portfolio websites:
 
 Rasull Khan Hossein - [GitHub: reose7452](https://github.com/reose7452) - [Portfolio](https://reose7452.github.io/portfolio/)
+
 Khattab Elmir - [GitHub: KhattabE](https://github.com/KhattabE) - [Portfolio](https://khattabe.github.io/portfolio-2026/)
 
 Project overview video (max 5 min):
@@ -21,7 +22,7 @@ Deployed application:
 
 [TrainingAppExam health endpoint](https://trainingappexam.dk/api/health)
 
-Source code repository:
+Github Repository:
 
 [github.com/KhattabE/TrainingAppExam](https://github.com/KhattabE/TrainingAppExam)
 
@@ -35,7 +36,7 @@ The application uses a layered backend architecture.
 
 Routes register the available HTTP endpoints.
 Controllers validate requests and path parameters, select HTTP status codes and map entities to response DTOs.
-Services contain authentication, password hashing, JWT handling, AI integration and workout-program business logic.
+Services contain authentication, password hashing, JWT handling, AI integration and workout program business logic.
 DAO classes provide database access through JPA and Hibernate.
 Entities represent the persisted data model.
 DTOs define request and response data without exposing persistence details such as password hashes.
@@ -56,30 +57,19 @@ Technologies used:
 * Docker, GitHub Actions and DigitalOcean
 
 ## Architecture Diagram
-
-```mermaid
-flowchart LR
-    Client[API client] --> Javalin[Javalin routes and JWT middleware]
-    Javalin --> Controllers[Controllers and DTO validation]
-    Controllers --> Services[Service layer]
-    Controllers --> DAO[DAO layer]
-    Services --> DAO
-    Services --> Gemini[Google Gemini API]
-    DAO --> Hibernate[JPA and Hibernate]
-    Hibernate --> PostgreSQL[(PostgreSQL)]
-```
+TODO
 
 ## Key Design Decisions
 
 **Authentication and authorization**
 
-Users register through /auth/register, where passwords are hashed with BCrypt before persistence. A successful login returns a signed JWT that expires after one hour. The token subject contains the user's normalized email, and protected routes validate the token before the controller is called. The project does not use roles; workout-program access is instead restricted to the user who owns the requested profile id.
+Users register through /auth/register, where passwords are hashed with BCrypt before persistence. A successful login returns a signed JWT that expires after one hour. The token subject contains the user's normalized email, and protected routes validate the token before the controller is called. Workout program access is restricted to the user who owns the requested profile id.
 
 **Safe user data**
 
-The public user-list, user-by-id and direct user-creation routes were removed. A logged-in user can read and update only their own profile through /api/users/me, and response DTOs never contain the password or password hash. Profile updates allow only the name and fitness fields to change, while the id, email, password and assigned workout program remain untouched. Emails are trimmed, converted to lowercase and protected by a unique database constraint.
+A logged in user can read and update only their own profile through /api/users/me, and response DTOs never contain the password or password hash. Profile updates allow only the name and fitness fields to change, while the id, email, password and assigned workout program remain untouched. Emails are trimmed, converted to lowercase and protected by a unique database constraint.
 
-**Read-only exercise catalogue**
+**Read only exercise catalogue**
 
 Exercises can be read publicly, but the API does not expose public create, update or delete operations. Exercises created as part of an AI generated workout program are stored internally by the workout service.
 
@@ -286,7 +276,7 @@ The endpoint identifies the user from the JWT and returns the updated safe profi
 }
 ```
 
-The id, email, password and assigned workout program cannot be changed through this endpoint. Sending protected or other unknown fields is rejected with `400 Bad Request`.
+The id, email, password and assigned workout program cannot be changed through this endpoint. Sending protected or other unknown fields is rejected with 400 Bad Request.
 
 ### Generate a Workout Program
 
@@ -321,7 +311,7 @@ Response:
 }
 ```
 
-The saved program can be retrieved with `GET /api/users/1/workout-program` using the same JWT.
+The saved program can be retrieved with GET /api/users/1/workout-program using the same JWT.
 
 ### Ask the AI Coach
 
