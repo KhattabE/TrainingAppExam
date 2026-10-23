@@ -375,6 +375,19 @@ class ApiTest extends DatabaseTest {
     }
 
     @Test
+    void overlongRegistrationFieldsReturn400WithoutRegisteringUser() {
+        RegisterRequestDTO registration = new RegisterRequestDTO("n".repeat(256), "e".repeat(244) + "@example.com", "password", 24, 165, 60, ExperienceLevel.BEGINNER, 3, TrainingGoal.MUSCLE_GAIN);
+
+        request().body(registration)
+                .post("/auth/register")
+                .then().statusCode(400)
+                .body("status", equalTo(400),
+                        "msg", allOf(containsString("Name must be at most 255 characters"), containsString("Email must be at most 255 characters")));
+
+        assertEquals(2, new UserDAOImpl(emf).getAll().size());
+    }
+
+    @Test
     void loginReturnsValidToken() {
         request()
                 .body(registration("login@test.dk", "correct-password"))

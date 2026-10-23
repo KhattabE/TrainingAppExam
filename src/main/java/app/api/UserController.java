@@ -43,6 +43,7 @@ public class UserController {
                 .check(update -> update.experienceLevel() != null, "Experience level is required")
                 .check(update -> update.trainingDaysPerWeek() >= 1 && update.trainingDaysPerWeek() <= 7, "Training days must be between 1 and 7")
                 .check(update -> update.goal() != null, "Training goal is required")
+                .required()
                 .get();
 
         user.setName(request.name().trim());

@@ -14,6 +14,5 @@ final class EntityRegistry {
         configuration.addAnnotatedClass(User.class);
         configuration.addAnnotatedClass(WorkoutProgram.class);
         configuration.addAnnotatedClass(Exercise.class);
-        // TODO: Add more entities here...
     }
 }

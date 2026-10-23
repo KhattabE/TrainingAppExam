@@ -41,6 +41,7 @@ public class ExerciseController {
     private int getId(Context ctx) {
         return ctx.pathParamAsClass("id", Integer.class)
                 .check(id -> id > 0, "Id must be greater than 0")
+                .required()
                 .get();
     }
 

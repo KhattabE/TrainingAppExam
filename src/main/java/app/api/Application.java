@@ -38,10 +38,12 @@ public class Application {
         EntityManagerFactory emf = HibernateConfig.getEntityManagerFactory();
         Javalin app = createApp(emf, new AiCoachService());
 
-        app.events(events -> events.serverStopped(emf::close));
         app.start(7070);
 
-        Runtime.getRuntime().addShutdownHook(new Thread(app::stop));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            app.stop();
+            emf.close();
+        }));
     }
 
     public static Javalin createApp(EntityManagerFactory emf, AiCoachService aiCoachService) {
@@ -66,70 +68,61 @@ public class Application {
         JavalinJackson jsonMapper = new JavalinJackson();
         jsonMapper.updateMapper(mapper -> mapper.disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT));
 
-        Javalin app = Javalin.create(config -> {
+        return Javalin.create(config -> {
             config.http.prefer405over404 = true;
             config.jsonMapper(jsonMapper);
+            config.routes.exception(ValidationException.class, (exception, ctx) -> {
+                String message = exception.getErrors().values().stream()
+                        .flatMap(errors -> errors.stream())
+                        .map(error -> error.getMessage())
+                        .distinct()
+                        .collect(Collectors.joining("; "));
+
+                if (message.isBlank()) {
+                    message = "Invalid request";
+                }
+
+                ctx.status(400).json(new ErrorResponse(400, message));
+            });
+
+            config.routes.exception(HttpResponseException.class, (exception, ctx) -> {
+                ctx.status(exception.getStatus())
+                        .json(new ErrorResponse(exception.getStatus(), exception.getMessage()));
+            });
+
+            config.routes.exception(ApiException.class, (exception, ctx) -> {
+                ctx.status(exception.getCode())
+                        .json(new ErrorResponse(exception.getCode(), exception.getMessage()));
+            });
+
+            config.routes.exception(IOException.class, (exception, ctx) -> {
+                logger.error("AI service request failed", exception);
+                ctx.status(502).json(new ErrorResponse(502, "AI service could not return a usable response"));
+            });
+
+            config.routes.exception(InterruptedException.class, (exception, ctx) -> {
+                Thread.currentThread().interrupt();
+                ctx.status(503).json(new ErrorResponse(503, "AI request was interrupted"));
+            });
+
+            config.routes.exception(Exception.class, (exception, ctx) -> {
+                logger.error("Unhandled error on {} {}", ctx.method(), ctx.path(), exception);
+                ctx.status(500).json(new ErrorResponse(500, "Internal server error"));
+            });
+
+            config.routes.before(ctx -> logger.info("{} {}", ctx.method(), ctx.path()));
+            config.routes.before("/api/coach", ctx -> authenticate(ctx, jwtService));
+            config.routes.before("/api/users/me", ctx -> authenticate(ctx, jwtService));
+            config.routes.before("/api/users/{id}/workout-program", ctx -> authenticate(ctx, jwtService));
+            config.routes.after(ctx -> logger.info("{} {} -> {}", ctx.method(), ctx.path(), ctx.status()));
+            config.routes.get("/api/health", ctx -> ctx.json(Map.of("status", "ok", "message", "API is running")));
+
+            new AuthRoutes(authController).register(config.routes);
+            new CoachRoutes(coachController).register(config.routes);
+            new ExerciseRoutes(exerciseController).register(config.routes);
+            new UserRoutes(userController).register(config.routes);
+            new WorkoutProgramRoutes(workoutProgramController).register(config.routes);
         });
-
-        app.exception(ValidationException.class, (exception, ctx) -> {
-            String message = exception.getErrors().values().stream()
-                    .flatMap(errors -> errors.stream())
-                    .map(error -> error.getMessage())
-                    .distinct()
-                    .collect(Collectors.joining("; "));
-
-            if (message.isBlank()) {
-                message = "Invalid request";
-            }
-
-            ctx.status(400).json(new ErrorResponse(400, message));
-        });
-
-        app.exception(HttpResponseException.class, (exception, ctx) -> {
-            ctx.status(exception.getStatus())
-                    .json(new ErrorResponse(exception.getStatus(), exception.getMessage()));
-        });
-
-        app.exception(ApiException.class, (exception, ctx) -> {
-            ctx.status(exception.getCode())
-                    .json(new ErrorResponse(exception.getCode(), exception.getMessage()));
-        });
-
-        app.exception(IOException.class, (exception, ctx) -> {
-            logger.error("AI service request failed", exception);
-            ctx.status(502).json(new ErrorResponse(502, "AI service could not return a usable response"));
-        });
-
-        app.exception(InterruptedException.class, (exception, ctx) -> {
-            Thread.currentThread().interrupt();
-            ctx.status(503).json(new ErrorResponse(503, "AI request was interrupted"));
-        });
-
-        app.exception(Exception.class, (exception, ctx) -> {
-            logger.error("Unhandled error on {} {}", ctx.method(), ctx.path(), exception);
-            ctx.status(500).json(new ErrorResponse(500, "Internal server error"));
-        });
-
-        app.before(ctx -> logger.info("{} {}", ctx.method(), ctx.path()));
-
-        app.before("/api/coach", ctx -> authenticate(ctx, jwtService));
-
-        app.before("/api/users/me", ctx -> authenticate(ctx, jwtService));
-
-        app.before("/api/users/{id}/workout-program",
-                ctx -> authenticate(ctx, jwtService));
-
-        app.after(ctx -> logger.info("{} {} -> {}", ctx.method(), ctx.path(), ctx.status()));
-
-        app.get("/api/health", ctx -> ctx.json(Map.of("status", "ok", "message", "API is running")));
-
-        new AuthRoutes(authController).register(app);
-        new CoachRoutes(coachController).register(app);
-        new ExerciseRoutes(exerciseController).register(app);
-        new UserRoutes(userController).register(app);
-        new WorkoutProgramRoutes(workoutProgramController).register(app);
-
-        return app;
     }
 
     private static void authenticate(Context ctx, JwtService jwtService) {

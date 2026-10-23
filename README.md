@@ -127,7 +127,7 @@ Represents a personalized workout program generated from a user's stored profile
 
 ### Exercise
 
-Represents an exercise with a name, muscle group, number of sets and number of repetitions. Valid muscle groups are CHEST, BACK, SHOULDERS, TRICEPS, TRICEPS, LEGS and CORE.
+Represents an exercise with a name, muscle group, number of sets and number of repetitions. Valid muscle groups are CHEST, BACK, SHOULDERS, BICEPS, TRICEPS, LEGS and CORE.
 
 ---
 
@@ -424,11 +424,11 @@ Run the full test suite with Docker running:
 mvn clean test
 ```
 
-The suite currently contains 74 tests: 40 API tests, 20 DAO tests and 14 service tests. Database-backed tests use an isolated PostgreSQL 16 Testcontainer, and the AI service is replaced with test doubles where external calls are not required.
+The suite currently contains 75 tests: 41 API tests, 20 DAO tests and 14 service tests. Database-backed tests use an isolated PostgreSQL 16 Testcontainer, and the AI service is replaced with test doubles where external calls are not required.
 
 ## Deployment
 
-Pull requests targeting master run the Maven build and test suite through GitHub Actions. A push to master additionally builds and publishes the Docker image, deploys it to DigitalOcean over SSH and verifies the public health endpoint. Production configuration is supplied through environment variables and secrets rather than committed credentials.
+Pull requests targeting master and pushes to master run the Maven build and test suite, then build and publish the Docker image through GitHub Actions. A push to master also deploys the image to DigitalOcean over SSH. The public health endpoint must be checked manually after deployment. Production configuration is supplied through environment variables and secrets rather than committed credentials.
 
 The deployed environment uses:
 
@@ -446,4 +446,4 @@ The deployed environment uses:
 - JWT authentication and ownership checks solve different problems: a valid token identifies the user, while the ownership check prevents access to another user's workout program.
 - Database constraints remain necessary even when the service performs validation first, especially for concurrent requests.
 - Integration tests with PostgreSQL Testcontainers verify behavior against the same database type used in production.
-- Deployment is not complete when a Docker container starts; an external health check must also confirm that the API is reachable.
+- Deployment is not complete when a Docker container starts; the public health endpoint must also be checked to confirm that the API is reachable.

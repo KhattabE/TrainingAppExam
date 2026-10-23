@@ -1,7 +1,7 @@
 package app.api.routes;
 
 import app.api.AuthController;
-import io.javalin.Javalin;
+import io.javalin.config.RoutesConfig;
 
 public class AuthRoutes {
 
@@ -11,8 +11,8 @@ public class AuthRoutes {
         this.controller = controller;
     }
 
-    public void register(Javalin app) {
-        app.post("/auth/register", controller::register);
-        app.post("/auth/login", controller::login);
+    public void register(RoutesConfig routes) {
+        routes.post("/auth/register", controller::register);
+        routes.post("/auth/login", controller::login);
     }
 }

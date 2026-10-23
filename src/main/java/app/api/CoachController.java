@@ -18,6 +18,7 @@ public class CoachController {
     public void ask(Context ctx) throws IOException, InterruptedException {
         CoachRequestDTO request = ctx.bodyValidator(CoachRequestDTO.class)
                 .check(body -> body.prompt() != null && !body.prompt().isBlank(), "Prompt cannot be empty")
+                .required()
                 .get();
         String answer = aiCoachService.askCoach(request.prompt());
         ctx.status(200).json(new CoachResponseDTO(answer));

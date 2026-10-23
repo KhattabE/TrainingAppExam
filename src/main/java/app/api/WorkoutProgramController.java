@@ -29,6 +29,7 @@ public class WorkoutProgramController {
 
         int userId = ctx.pathParamAsClass("id", Integer.class)
                 .check(id -> id > 0, "User id must be greater than 0")
+                .required()
                 .get();
 
         verifyOwnership(ctx, userId);
@@ -43,6 +44,7 @@ public class WorkoutProgramController {
 
         int userId = ctx.pathParamAsClass("id", Integer.class)
                 .check(id -> id > 0, "User id must be greater than 0")
+                .required()
                 .get();
 
         verifyOwnership(ctx, userId);
