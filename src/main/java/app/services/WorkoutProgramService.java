@@ -11,6 +11,7 @@ import app.entities.WorkoutProgram;
 import app.exceptions.ApiException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.LockModeType;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -18,6 +19,7 @@ import java.util.List;
 
 public class WorkoutProgramService {
 
+    private static final int MAX_TEXT_LENGTH = 255;
     private final EntityManagerFactory emf;
     private final UserDAO userDAO;
     private final AiCoachService aiCoachService;
@@ -42,12 +44,16 @@ public class WorkoutProgramService {
             em.getTransaction().begin();
 
             try {
-                User managedUser = em.find(User.class, userId);
+                User managedUser = em.find(User.class, userId, LockModeType.PESSIMISTIC_WRITE);
 
                 if (managedUser == null) {
                     throw new ApiException(404, "User not found");
                 }
 
+                WorkoutProgram oldProgram = managedUser.getWorkoutProgram();
+                if (oldProgram != null) {
+                    em.lock(oldProgram, LockModeType.PESSIMISTIC_WRITE);
+                }
                 List<Exercise> exercises = new ArrayList<>();
 
                 for (GeneratedExerciseDTO generatedExercise : generatedProgram.exercises()) {
@@ -63,6 +69,8 @@ public class WorkoutProgramService {
                 em.persist(program);
 
                 managedUser.setWorkoutProgram(program);
+                em.flush();
+                removeUnusedProgram(em, oldProgram);
 
                 em.getTransaction().commit();
                 return program;
@@ -72,6 +80,35 @@ public class WorkoutProgramService {
                     em.getTransaction().rollback();
                 }
                 throw exception;
+            }
+        }
+    }
+
+    private void removeUnusedProgram(EntityManager em, WorkoutProgram program) {
+        if (program == null) {
+            return;
+        }
+
+        long userCount = em.createQuery("SELECT COUNT(u) FROM User u WHERE u.workoutProgram = :program", Long.class)
+                .setParameter("program", program)
+                .getSingleResult();
+
+        if (userCount > 0) {
+            return;
+        }
+
+        List<Exercise> exercises = new ArrayList<>(program.getExercises());
+        program.getExercises().clear();
+        em.remove(program);
+        em.flush();
+
+        for (Exercise exercise : exercises) {
+            long programCount = em.createQuery("SELECT COUNT(w) FROM WorkoutProgram w JOIN w.exercises e WHERE e = :exercise", Long.class)
+                    .setParameter("exercise", exercise)
+                    .getSingleResult();
+
+            if (programCount == 0) {
+                em.remove(exercise);
             }
         }
     }
@@ -99,13 +136,13 @@ public class WorkoutProgramService {
     }
 
     private void validateProgram(GeneratedWorkoutProgramDTO program) {
-        if (program == null || isBlank(program.name()) || isBlank(program.description()) || program.exercises() == null || program.exercises().isEmpty()) {
+        if (program == null || isBlank(program.name()) || isBlank(program.description()) || program.name().length() > MAX_TEXT_LENGTH || program.description().length() > MAX_TEXT_LENGTH || program.exercises() == null || program.exercises().isEmpty()) {
 
             throw new ApiException(502, "AI generated an invalid workout program");
         }
 
         for (GeneratedExerciseDTO exercise : program.exercises()) {
-            if (exercise == null || isBlank(exercise.name()) || exercise.muscleGroup() == null || exercise.sets() <= 0 || exercise.reps() <= 0) {
+            if (exercise == null || isBlank(exercise.name()) || exercise.name().length() > MAX_TEXT_LENGTH || exercise.muscleGroup() == null || exercise.sets() <= 0 || exercise.reps() <= 0) {
 
                 throw new ApiException(502, "AI generated an invalid exercise");
             }

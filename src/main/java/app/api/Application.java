@@ -16,9 +16,11 @@ import app.services.AuthService;
 import app.services.JwtService;
 import app.services.PasswordService;
 import app.services.WorkoutProgramService;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.http.HttpResponseException;
+import io.javalin.json.JavalinJackson;
 import io.javalin.validation.ValidationException;
 import jakarta.persistence.EntityManagerFactory;
 import org.slf4j.Logger;
@@ -56,13 +58,18 @@ public class Application {
         WorkoutProgramService workoutProgramService =
                 new WorkoutProgramService(emf, aiCoachService);
 
-        WorkoutProgramController workoutProgramController =
-                new WorkoutProgramController(workoutProgramService, userDAO, jwtService);
+        WorkoutProgramController workoutProgramController = new WorkoutProgramController(workoutProgramService, userDAO);
 
         AuthService authService = new AuthService(userDAO, new PasswordService(), jwtService);
         AuthController authController = new AuthController(authService);
 
-        Javalin app = Javalin.create(config -> config.http.prefer405over404 = true);
+        JavalinJackson jsonMapper = new JavalinJackson();
+        jsonMapper.updateMapper(mapper -> mapper.disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT));
+
+        Javalin app = Javalin.create(config -> {
+            config.http.prefer405over404 = true;
+            config.jsonMapper(jsonMapper);
+        });
 
         app.exception(ValidationException.class, (exception, ctx) -> {
             String message = exception.getErrors().values().stream()
@@ -71,7 +78,11 @@ public class Application {
                     .distinct()
                     .collect(Collectors.joining("; "));
 
-            ctx.status(400).json(new ErrorResponse(400, message.isBlank() ? "Invalid request" : message));
+            if (message.isBlank()) {
+                message = "Invalid request";
+            }
+
+            ctx.status(400).json(new ErrorResponse(400, message));
         });
 
         app.exception(HttpResponseException.class, (exception, ctx) -> {
@@ -130,10 +141,16 @@ public class Application {
 
         String token = authorization.substring("Bearer ".length()).trim();
 
-        if (token.isEmpty() || !jwtService.validateToken(token)) {
+        if (token.isEmpty()) {
             throw new ApiException(401, "Unauthorized");
         }
 
-        ctx.attribute("userEmail", jwtService.getEmailFromToken(token));
+        String email = jwtService.validateAndGetEmail(token);
+
+        if (email == null) {
+            throw new ApiException(401, "Unauthorized");
+        }
+
+        ctx.attribute("userEmail", email);
     }
 }

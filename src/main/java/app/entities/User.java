@@ -23,11 +23,11 @@ public class User {
     @Column
     private String name;
 
-    @Column
+    @Column(nullable = false)
     @ToString.Exclude
     private String password;
 
-    @Column
+    @Column(nullable = false, unique = true)
     private String email;
 
     @Column

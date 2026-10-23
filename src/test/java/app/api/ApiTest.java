@@ -2,12 +2,14 @@
 package app.api;
 
 import app.dao.ExerciseDAOImpl;
+import app.dao.UserDAO;
 import app.dao.UserDAOImpl;
 import app.dao.WorkoutProgramDAOImpl;
 import app.dto.GeneratedExerciseDTO;
 import app.dto.GeneratedWorkoutProgramDTO;
 import app.dto.LoginRequestDTO;
 import app.dto.RegisterRequestDTO;
+import app.dto.UpdateUserRequestDTO;
 import app.entities.ExperienceLevel;
 import app.entities.MuscleGroup;
 import app.entities.TrainingGoal;
@@ -25,6 +27,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -158,6 +161,171 @@ class ApiTest extends DatabaseTest {
     }
 
     @Test
+    void updateCurrentUserRejectsMissingToken() {
+        request()
+                .body(new UpdateUserRequestDTO("Anna Updated", 26, 172, 68, ExperienceLevel.INTERMEDIATE, 4, TrainingGoal.STRENGTH))
+                .put("/api/users/me")
+                .then().statusCode(401)
+                .body("status", equalTo(401),
+                        "msg", equalTo("Unauthorized"));
+    }
+
+    @Test
+    void updateCurrentUserRejectsInvalidToken() {
+        request()
+                .header("Authorization", "Bearer invalid-token")
+                .body(new UpdateUserRequestDTO("Anna Updated", 26, 172, 68, ExperienceLevel.INTERMEDIATE, 4, TrainingGoal.STRENGTH))
+                .put("/api/users/me")
+                .then().statusCode(401)
+                .body("status", equalTo(401),
+                        "msg", equalTo("Unauthorized"));
+    }
+
+    @Test
+    void updateCurrentUserPersistsProfileAndPreservesProtectedFields() {
+        UserDAO userDAO = new UserDAOImpl(emf);
+        User originalUser = userDAO.getById(seed.beginner().getId());
+        String originalPassword = originalUser.getPassword();
+        int originalWorkoutProgramId = originalUser.getWorkoutProgram().getId();
+        UpdateUserRequestDTO update = new UpdateUserRequestDTO("  Anna Updated  ", 26, 172, 68, ExperienceLevel.INTERMEDIATE, 4, TrainingGoal.STRENGTH);
+
+        request()
+                .header("Authorization", bearerToken())
+                .body(update)
+                .put("/api/users/me")
+                .then().statusCode(200)
+                .body("id", equalTo(seed.beginner().getId()),
+                        "name", equalTo("Anna Updated"),
+                        "email", equalTo("anna@test.dk"),
+                        "age", equalTo(26),
+                        "height", equalTo(172f),
+                        "weight", equalTo(68f),
+                        "experienceLevel", equalTo("INTERMEDIATE"),
+                        "trainingDaysPerWeek", equalTo(4),
+                        "goal", equalTo("STRENGTH"),
+                        "workoutProgramId", equalTo(originalWorkoutProgramId),
+                        "$", not(hasKey("password")));
+
+        User storedUser = userDAO.getById(seed.beginner().getId());
+        assertEquals("Anna Updated", storedUser.getName());
+        assertEquals(26, storedUser.getAge());
+        assertEquals(172, storedUser.getHeight());
+        assertEquals(68, storedUser.getWeight());
+        assertEquals(ExperienceLevel.INTERMEDIATE, storedUser.getExperienceLevel());
+        assertEquals(4, storedUser.getTrainingDaysPerWeek());
+        assertEquals(TrainingGoal.STRENGTH, storedUser.getGoal());
+        assertEquals("anna@test.dk", storedUser.getEmail());
+        assertEquals(originalPassword, storedUser.getPassword());
+        assertEquals(originalWorkoutProgramId, storedUser.getWorkoutProgram().getId());
+    }
+
+    @Test
+    void updateCurrentUserRejectsInvalidProfileWithoutPersistingChanges() {
+        UpdateUserRequestDTO update = new UpdateUserRequestDTO(" ", 0, 0, 0, null, 0, null);
+
+        request()
+                .header("Authorization", bearerToken())
+                .body(update)
+                .put("/api/users/me")
+                .then().statusCode(400)
+                .body("status", equalTo(400),
+                        "msg", allOf(containsString("Name is required"), containsString("Age must be greater than 0"), containsString("Height must be a finite number greater than 0"), containsString("Weight must be a finite number greater than 0"), containsString("Experience level is required"), containsString("Training days must be between 1 and 7"), containsString("Training goal is required")));
+
+        User storedUser = new UserDAOImpl(emf).getById(seed.beginner().getId());
+        assertEquals("Anna", storedUser.getName());
+        assertEquals(25, storedUser.getAge());
+        assertEquals(3, storedUser.getTrainingDaysPerWeek());
+        assertEquals(TrainingGoal.MUSCLE_GAIN, storedUser.getGoal());
+    }
+
+    @Test
+    void updateCurrentUserRejectsValuesThatCannotBeStored() {
+        UpdateUserRequestDTO update = new UpdateUserRequestDTO("x".repeat(256), 25, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, ExperienceLevel.BEGINNER, 3, TrainingGoal.MUSCLE_GAIN);
+
+        request()
+                .header("Authorization", bearerToken())
+                .body(update)
+                .put("/api/users/me")
+                .then().statusCode(400)
+                .body("status", equalTo(400),
+                        "msg", allOf(containsString("Name must be at most 255 characters"), containsString("Height must be a finite number greater than 0"), containsString("Weight must be a finite number greater than 0")));
+
+        User storedUser = new UserDAOImpl(emf).getById(seed.beginner().getId());
+        assertEquals("Anna", storedUser.getName());
+        assertEquals(170, storedUser.getHeight());
+        assertEquals(65, storedUser.getWeight());
+    }
+
+    @Test
+    void updateCurrentUserRejectsProtectedFields() {
+        UserDAO userDAO = new UserDAOImpl(emf);
+        User originalUser = userDAO.getById(seed.beginner().getId());
+        String originalPassword = originalUser.getPassword();
+        Map<String, Object> update = new HashMap<>();
+        update.put("name", "Anna Updated");
+        update.put("age", 26);
+        update.put("height", 172);
+        update.put("weight", 68);
+        update.put("experienceLevel", "INTERMEDIATE");
+        update.put("trainingDaysPerWeek", 4);
+        update.put("goal", "STRENGTH");
+        update.put("email", "attacker@test.dk");
+        update.put("password", "new-password");
+
+        request()
+                .header("Authorization", bearerToken())
+                .body(update)
+                .put("/api/users/me")
+                .then().statusCode(400);
+
+        User storedUser = userDAO.getById(seed.beginner().getId());
+        assertEquals("anna@test.dk", storedUser.getEmail());
+        assertEquals(originalPassword, storedUser.getPassword());
+        assertEquals("Anna", storedUser.getName());
+    }
+
+    @Test
+    void updateCurrentUserRejectsFractionalWholeNumberFields() {
+        Map<String, Object> update = new HashMap<>();
+        update.put("name", "Anna Updated");
+        update.put("age", 25.5);
+        update.put("height", 172);
+        update.put("weight", 68);
+        update.put("experienceLevel", "INTERMEDIATE");
+        update.put("trainingDaysPerWeek", 3.5);
+        update.put("goal", "STRENGTH");
+
+        request()
+                .header("Authorization", bearerToken())
+                .body(update)
+                .put("/api/users/me")
+                .then().statusCode(400);
+
+        User storedUser = new UserDAOImpl(emf).getById(seed.beginner().getId());
+        assertEquals(25, storedUser.getAge());
+        assertEquals(3, storedUser.getTrainingDaysPerWeek());
+    }
+
+    @Test
+    void updateCurrentUserOnlyChangesAuthenticatedUser() {
+        String advancedUserToken = "Bearer " + jwtService.generateToken(seed.advanced());
+        UpdateUserRequestDTO update = new UpdateUserRequestDTO("Omar Updated", 31, 186, 86, ExperienceLevel.INTERMEDIATE, 5, TrainingGoal.GENERAL_FITNESS);
+
+        request()
+                .header("Authorization", advancedUserToken)
+                .body(update)
+                .put("/api/users/me")
+                .then().statusCode(200)
+                .body("id", equalTo(seed.advanced().getId()),
+                        "name", equalTo("Omar Updated"),
+                        "email", equalTo("omar@test.dk"));
+
+        UserDAO userDAO = new UserDAOImpl(emf);
+        assertEquals("Omar Updated", userDAO.getById(seed.advanced().getId()).getName());
+        assertEquals("Anna", userDAO.getById(seed.beginner().getId()).getName());
+    }
+
+    @Test
     void oldUserRoutesAreNotAvailable() {
         request()
                 .get("/api/users")
@@ -188,7 +356,7 @@ class ApiTest extends DatabaseTest {
     @Test
     void registerPersistsHashedPasswordWithoutReturningIt() {
         RegisterRequestDTO registration =
-                registration("register@test.dk", "plain-password");
+                registration("  REGISTER@Test.DK  ", "plain-password");
 
         request().body(registration)
                 .post("/auth/register")
@@ -293,8 +461,12 @@ class ApiTest extends DatabaseTest {
 
         assertEquals(programId, user.getWorkoutProgram().getId());
         assertEquals(2, program.getExercises().size());
-        assertEquals(4, new ExerciseDAOImpl(emf).getAll().size());
-        assertEquals(3, new WorkoutProgramDAOImpl(emf).getAll().size());
+        assertEquals(3, new ExerciseDAOImpl(emf).getAll().size());
+        assertEquals(2, new WorkoutProgramDAOImpl(emf).getAll().size());
+        assertNull(new WorkoutProgramDAOImpl(emf).getById(seed.fullBody().getId()));
+        assertNull(new ExerciseDAOImpl(emf).getById(seed.squat().getId()));
+        assertNotNull(new ExerciseDAOImpl(emf).getById(seed.benchPress().getId()));
+        assertNotNull(new WorkoutProgramDAOImpl(emf).getById(seed.upperBody().getId()));
         assertEquals(userId, ai.lastUser.getId());
         assertEquals(TrainingGoal.MUSCLE_GAIN, ai.lastUser.getGoal());
 
@@ -303,6 +475,40 @@ class ApiTest extends DatabaseTest {
                 .get("/api/users/me")
                 .then().statusCode(200)
                 .body("workoutProgramId", equalTo(programId));
+    }
+
+    @Test
+    void generatingAgainReplacesPreviousProgramAndExercises() {
+        int userId = seed.beginner().getId();
+        int firstProgramId = request().header("Authorization", bearerToken()).post("/api/users/" + userId + "/workout-program").then().statusCode(201).extract().path("id");
+        List<Integer> firstExerciseIds = new WorkoutProgramDAOImpl(emf).getById(firstProgramId).getExercises().stream().map(exercise -> exercise.getId()).toList();
+        ai.program = new GeneratedWorkoutProgramDTO("AI Strength", "A stronger program", List.of(new GeneratedExerciseDTO("Row", MuscleGroup.BACK, 4, 8), new GeneratedExerciseDTO("Plank", MuscleGroup.CORE, 3, 30)));
+
+        int secondProgramId = request().header("Authorization", bearerToken()).post("/api/users/" + userId + "/workout-program").then().statusCode(201).extract().path("id");
+
+        assertNotEquals(firstProgramId, secondProgramId);
+        assertEquals(secondProgramId, new UserDAOImpl(emf).getById(userId).getWorkoutProgram().getId());
+        assertNull(new WorkoutProgramDAOImpl(emf).getById(firstProgramId));
+        assertTrue(firstExerciseIds.stream().allMatch(id -> new ExerciseDAOImpl(emf).getById(id) == null));
+        assertEquals(2, new WorkoutProgramDAOImpl(emf).getAll().size());
+        assertEquals(3, new ExerciseDAOImpl(emf).getAll().size());
+    }
+
+    @Test
+    void generatingProgramPreservesOldProgramUsedByAnotherUser() {
+        UserDAO userDAO = new UserDAOImpl(emf);
+        User advancedUser = userDAO.getById(seed.advanced().getId());
+        advancedUser.setWorkoutProgram(seed.fullBody());
+        userDAO.update(advancedUser);
+
+        request().header("Authorization", bearerToken()).post("/api/users/" + seed.beginner().getId() + "/workout-program").then().statusCode(201);
+
+        assertEquals(seed.fullBody().getId(), userDAO.getById(seed.advanced().getId()).getWorkoutProgram().getId());
+        assertNotNull(new WorkoutProgramDAOImpl(emf).getById(seed.fullBody().getId()));
+        assertNotNull(new ExerciseDAOImpl(emf).getById(seed.benchPress().getId()));
+        assertNotNull(new ExerciseDAOImpl(emf).getById(seed.squat().getId()));
+        assertEquals(3, new WorkoutProgramDAOImpl(emf).getAll().size());
+        assertEquals(4, new ExerciseDAOImpl(emf).getAll().size());
     }
 
     @Test
@@ -357,21 +563,70 @@ class ApiTest extends DatabaseTest {
     }
 
     @Test
-    void failedProgramSaveRollsBackChanges() {
-        // PostgreSQL rejects descriptions longer than 255 characters.
+    void generatedProgramWithTooLongDescriptionReturns502() {
         ai.program = new GeneratedWorkoutProgramDTO(
-                "AI Program", "x".repeat(300),
+                "AI Program", "x".repeat(256),
                 validProgram().exercises()
         );
 
         request()
                 .header("Authorization", bearerToken())
                 .post("/api/users/" + seed.beginner().getId() + "/workout-program")
-                .then().statusCode(500)
-                .body("status", equalTo(500),
-                        "msg", equalTo("Internal server error"));
+                .then().statusCode(502)
+                .body("status", equalTo(502),
+                        "msg", equalTo("AI generated an invalid workout program"));
 
         assertOriginalData();
+    }
+
+    @Test
+    void generatedProgramWithTooLongNameReturns502() {
+        ai.program = new GeneratedWorkoutProgramDTO(
+                "x".repeat(256), "A simple program",
+                validProgram().exercises()
+        );
+
+        request()
+                .header("Authorization", bearerToken())
+                .post("/api/users/" + seed.beginner().getId() + "/workout-program")
+                .then().statusCode(502)
+                .body("status", equalTo(502),
+                        "msg", equalTo("AI generated an invalid workout program"));
+
+        assertOriginalData();
+    }
+
+    @Test
+    void generatedExerciseWithTooLongNameReturns502() {
+        ai.program = new GeneratedWorkoutProgramDTO(
+                "AI Program", "A simple program",
+                List.of(new GeneratedExerciseDTO("x".repeat(256), MuscleGroup.CHEST, 3, 10))
+        );
+
+        request()
+                .header("Authorization", bearerToken())
+                .post("/api/users/" + seed.beginner().getId() + "/workout-program")
+                .then().statusCode(502)
+                .body("status", equalTo(502),
+                        "msg", equalTo("AI generated an invalid exercise"));
+
+        assertOriginalData();
+    }
+
+    @Test
+    void generatedTextAtMaximumLengthIsAccepted() {
+        String programName = "p".repeat(255);
+        String description = "d".repeat(255);
+        String exerciseName = "e".repeat(255);
+        ai.program = new GeneratedWorkoutProgramDTO(programName, description, List.of(new GeneratedExerciseDTO(exerciseName, MuscleGroup.CHEST, 3, 10)));
+
+        request()
+                .header("Authorization", bearerToken())
+                .post("/api/users/" + seed.beginner().getId() + "/workout-program")
+                .then().statusCode(201)
+                .body("name", equalTo(programName),
+                        "description", equalTo(description),
+                        "exercises[0].name", equalTo(exerciseName));
     }
 
     @Test

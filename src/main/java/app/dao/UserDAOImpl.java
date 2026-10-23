@@ -4,8 +4,10 @@ import app.entities.ExperienceLevel;
 import app.entities.User;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.LockModeType;
 
 import java.util.List;
+import java.util.Locale;
 
 public class UserDAOImpl implements UserDAO {
 
@@ -39,6 +41,29 @@ public class UserDAOImpl implements UserDAO {
             User updatedUser = em.merge(user);
             em.getTransaction().commit();
             return updatedUser;
+        }
+    }
+
+    @Override
+    public User updateProfile(User user) {
+        try (EntityManager em = emf.createEntityManager()) {
+            em.getTransaction().begin();
+            User currentUser = em.find(User.class, user.getId(), LockModeType.PESSIMISTIC_WRITE);
+
+            if (currentUser == null) {
+                em.getTransaction().rollback();
+                return null;
+            }
+
+            currentUser.setName(user.getName());
+            currentUser.setAge(user.getAge());
+            currentUser.setHeight(user.getHeight());
+            currentUser.setWeight(user.getWeight());
+            currentUser.setExperienceLevel(user.getExperienceLevel());
+            currentUser.setTrainingDaysPerWeek(user.getTrainingDaysPerWeek());
+            currentUser.setGoal(user.getGoal());
+            em.getTransaction().commit();
+            return currentUser;
         }
     }
 
@@ -87,9 +112,15 @@ public class UserDAOImpl implements UserDAO {
 
     @Override
     public User getByEmail(String email) {
+        if (email == null) {
+            return null;
+        }
+
+        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+
         try (EntityManager em = emf.createEntityManager()) {
-            return em.createQuery("SELECT u FROM User u WHERE u.email = :email", User.class)
-                    .setParameter("email", email)
+            return em.createQuery("SELECT u FROM User u WHERE LOWER(TRIM(u.email)) = :email", User.class)
+                    .setParameter("email", normalizedEmail)
                     .getResultStream()
                     .findFirst()
                     .orElse(null);

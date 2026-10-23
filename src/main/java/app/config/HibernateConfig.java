@@ -47,8 +47,13 @@ public final class HibernateConfig {
         String username = Utils.getPropertyValue("DB_USERNAME", "config.properties");
         String passwordVariable = Utils.getPropertyValue("DB_PASSWORD", "config.properties");
         String password = System.getenv(passwordVariable);
+        String connectionString = System.getenv("CONNECTION_STR");
 
-        props.put("hibernate.connection.url", "jdbc:postgresql://134.209.233.109:5432/" + dbName);
+        if (connectionString == null || connectionString.isBlank()) {
+            connectionString = "jdbc:postgresql://localhost:5432/";
+        }
+
+        props.put("hibernate.connection.url", connectionString + dbName);
         props.put("hibernate.connection.username", username);
         props.put("hibernate.connection.password", password);
     }

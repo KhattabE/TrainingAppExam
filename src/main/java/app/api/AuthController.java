@@ -49,7 +49,11 @@ public class AuthController {
     }
 
     private UserResponseDTO toResponse(User user) {
-        Integer workoutProgramId = user.getWorkoutProgram() == null ? null : user.getWorkoutProgram().getId();
+        Integer workoutProgramId = null;
+
+        if (user.getWorkoutProgram() != null) {
+            workoutProgramId = user.getWorkoutProgram().getId();
+        }
 
         return new UserResponseDTO(user.getId(), user.getName(), user.getEmail(), user.getAge(), user.getHeight(),
                 user.getWeight(), user.getExperienceLevel(), user.getTrainingDaysPerWeek(), user.getGoal(),

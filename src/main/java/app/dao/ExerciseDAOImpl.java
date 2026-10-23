@@ -50,8 +50,6 @@ public class ExerciseDAOImpl implements ExerciseDAO {
 
             if (foundExercise != null) {
                 em.remove(foundExercise);
-            } else {
-                System.out.println("No exercise with that id!");
             }
             em.getTransaction().commit();
 

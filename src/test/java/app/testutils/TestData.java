@@ -45,8 +45,10 @@ public final class TestData {
             em.persist(upperBody);
 
             User beginner = new User("Anna", "anna@test.dk", 25, 170, 65, ExperienceLevel.BEGINNER, 3, TrainingGoal.MUSCLE_GAIN);
+            beginner.setPassword("test-password");
             beginner.setWorkoutProgram(fullBody);
             User advanced = new User("Omar", "omar@test.dk", 30, 185, 85, ExperienceLevel.ADVANCED, 4, TrainingGoal.STRENGTH);
+            advanced.setPassword("test-password");
             em.persist(beginner);
             em.persist(advanced);
             em.getTransaction().commit();

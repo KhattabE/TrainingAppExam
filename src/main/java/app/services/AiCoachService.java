@@ -123,9 +123,14 @@ public class AiCoachService {
             throw new IllegalStateException("GEMINI_API_KEY is not configured");
         }
 
-        Map<String, Object> generationConfig = jsonMode
-                ? Map.of("maxOutputTokens", maxOutputTokens, "responseMimeType", "application/json")
-                : Map.of("maxOutputTokens", maxOutputTokens);
+        Map<String, Object> generationConfig;
+
+        if (jsonMode) {
+            generationConfig = Map.of("maxOutputTokens", maxOutputTokens, "responseMimeType", "application/json");
+        } else {
+            generationConfig = Map.of("maxOutputTokens", maxOutputTokens);
+        }
+
         Map<String, Object> body = Map.of(
                 "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
                 "generationConfig", generationConfig);

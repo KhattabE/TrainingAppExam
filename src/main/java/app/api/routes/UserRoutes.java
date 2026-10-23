@@ -13,5 +13,6 @@ public class UserRoutes {
 
     public void register(Javalin app) {
         app.get("/api/users/me", controller::getCurrentUser);
+        app.put("/api/users/me", controller::updateCurrentUser);
     }
 }

@@ -7,7 +7,6 @@ import app.dto.WorkoutProgramResponseDTO;
 import app.entities.User;
 import app.entities.WorkoutProgram;
 import app.exceptions.ApiException;
-import app.services.JwtService;
 import app.services.WorkoutProgramService;
 import io.javalin.http.Context;
 
@@ -18,13 +17,11 @@ public class WorkoutProgramController {
 
     private final WorkoutProgramService workoutProgramService;
     private final UserDAO userDAO;
-    private final JwtService jwtService;
 
-    public WorkoutProgramController(WorkoutProgramService workoutProgramService, UserDAO userDAO, JwtService jwtService) {
+    public WorkoutProgramController(WorkoutProgramService workoutProgramService, UserDAO userDAO) {
 
         this.workoutProgramService = workoutProgramService;
         this.userDAO = userDAO;
-        this.jwtService = jwtService;
     }
 
     public void generateForUser(Context ctx)
@@ -58,19 +55,11 @@ public class WorkoutProgramController {
 
     private void verifyOwnership(Context ctx, int requestedUserId) {
 
-        String authorization = ctx.header("Authorization");
+        String email = ctx.attribute("userEmail");
 
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
+        if (email == null) {
             throw new ApiException(401, "Unauthorized");
         }
-
-        String token = authorization.substring(7).trim();
-
-        if (!jwtService.validateToken(token)) {
-            throw new ApiException(401, "Unauthorized");
-        }
-
-        String email = jwtService.getEmailFromToken(token);
 
         User loggedInUser = userDAO.getByEmail(email);
 

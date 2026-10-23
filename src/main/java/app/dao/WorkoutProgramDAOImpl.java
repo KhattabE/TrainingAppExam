@@ -53,8 +53,6 @@ public class WorkoutProgramDAOImpl implements WorkoutProgramDAO {
 
             if (foundWorkout != null) {
                 em.remove(foundWorkout);
-            } else {
-                System.out.println("No workout program with that id!");
             }
             em.getTransaction().commit();
 
