@@ -57,7 +57,9 @@ Technologies used:
 * Docker, GitHub Actions and DigitalOcean
 
 ## Architecture Diagram
-TODO
+
+![Application architecture diagram](docs/images/architecture_diagram2.png)
+
 
 ## Key Design Decisions
 
@@ -91,7 +93,7 @@ Javalin exception handlers convert validation, authentication, AI and unexpected
 
 ## ERD
 
-TODO
+![Database entity relationship diagram](docs/images/erd.png)
 
 ## Important Entities
 

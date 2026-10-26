@@ -1,12 +1,8 @@
-@baseUrl = http://localhost:7070
+@baseUrl = https://trainingappexam.dk
 @email = test@test.com
-@password = plain-password
+@password = plainpassword
 @notFoundId = 2147483647
 @otherUserId = 2147483647
-
-# Run Login before protected requests.
-# Run Get current user before workout-program requests.
-# Change the email when registering a new user. Reusing an email returns 409.
 
 ### Health check
 GET {{baseUrl}}/api/health
