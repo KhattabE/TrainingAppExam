@@ -4,8 +4,8 @@ package app.entities;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -28,7 +28,8 @@ public class WorkoutProgram {
     private int trainingDaysPerWeek;
 
     @ManyToMany
-    private List<Exercise> exercises = new ArrayList<>();
+    @JoinTable(name = "workoutprogram_exercise", joinColumns = @JoinColumn(name = "workoutprogram_id"), inverseJoinColumns = @JoinColumn(name = "exercises_id"))
+    private Set<Exercise> exercises = new LinkedHashSet<>();
 
     public WorkoutProgram(String name, String description, int trainingDaysPerWeek) {
         this.name = name;

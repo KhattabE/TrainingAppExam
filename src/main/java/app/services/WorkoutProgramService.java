@@ -15,7 +15,9 @@ import jakarta.persistence.LockModeType;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public class WorkoutProgramService {
 
@@ -54,7 +56,7 @@ public class WorkoutProgramService {
                 if (oldProgram != null) {
                     em.lock(oldProgram, LockModeType.PESSIMISTIC_WRITE);
                 }
-                List<Exercise> exercises = new ArrayList<>();
+                Set<Exercise> exercises = new LinkedHashSet<>();
 
                 for (GeneratedExerciseDTO generatedExercise : generatedProgram.exercises()) {
                     Exercise exercise = new Exercise(generatedExercise.name(), generatedExercise.muscleGroup(), generatedExercise.sets(), generatedExercise.reps());

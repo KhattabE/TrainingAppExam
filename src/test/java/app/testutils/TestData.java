@@ -9,7 +9,7 @@ import app.entities.WorkoutProgram;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 
-import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 public final class TestData {
@@ -38,9 +38,9 @@ public final class TestData {
             em.persist(squat);
 
             WorkoutProgram fullBody = new WorkoutProgram("Full Body", "Beginner program", 3);
-            fullBody.setExercises(new ArrayList<>(List.of(benchPress, squat)));
+            fullBody.setExercises(new LinkedHashSet<>(List.of(benchPress, squat)));
             WorkoutProgram upperBody = new WorkoutProgram("Upper Body", "Advanced program", 4);
-            upperBody.setExercises(new ArrayList<>(List.of(benchPress)));
+            upperBody.setExercises(new LinkedHashSet<>(List.of(benchPress)));
             em.persist(fullBody);
             em.persist(upperBody);
 

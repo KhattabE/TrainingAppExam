@@ -2,10 +2,12 @@ package app.dao;
 
 import app.entities.WorkoutProgram;
 import app.testutils.DatabaseTest;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -22,7 +24,7 @@ class WorkoutProgramDAOTest extends DatabaseTest {
     @Test
     void createAndReadProgramWithExercises() {
         WorkoutProgram program = new WorkoutProgram("Leg Day", "Lower body", 2);
-        program.setExercises(new ArrayList<>(List.of(seed.squat())));
+        program.setExercises(new LinkedHashSet<>(List.of(seed.squat())));
         WorkoutProgram saved = workoutProgramDAO.create(program);
         WorkoutProgram found = workoutProgramDAO.getById(saved.getId());
         assertNotNull(saved.getId());
@@ -30,6 +32,41 @@ class WorkoutProgramDAOTest extends DatabaseTest {
         assertEquals("Lower body", found.getDescription());
         assertEquals(2, found.getTrainingDaysPerWeek());
         assertEquals(List.of(seed.squat().getId()), found.getExercises().stream().map(exercise -> exercise.getId()).toList());
+    }
+
+    @Test
+    void joinTableHasCompositePrimaryKey() {
+        try (EntityManager em = emf.createEntityManager()) {
+            List<?> columns = em.createNativeQuery("""
+                    SELECT column_name
+                    FROM information_schema.key_column_usage
+                    WHERE table_schema = 'public' AND table_name = 'workoutprogram_exercise'
+                    AND constraint_name IN (
+                        SELECT constraint_name FROM information_schema.table_constraints
+                        WHERE table_schema = 'public' AND table_name = 'workoutprogram_exercise'
+                        AND constraint_type = 'PRIMARY KEY'
+                    )
+                    """).getResultList();
+
+            assertEquals(2, columns.size());
+            assertTrue(columns.containsAll(List.of("workoutprogram_id", "exercises_id")));
+        }
+    }
+
+    @Test
+    void duplicateExerciseLinkIsRejectedByDatabase() {
+        try (EntityManager em = emf.createEntityManager()) {
+            em.getTransaction().begin();
+
+            try {
+                assertThrows(PersistenceException.class, () -> em.createNativeQuery("INSERT INTO workoutprogram_exercise (workoutprogram_id, exercises_id) VALUES (:programId, :exerciseId)")
+                        .setParameter("programId", seed.fullBody().getId())
+                        .setParameter("exerciseId", seed.benchPress().getId())
+                        .executeUpdate());
+            } finally {
+                em.getTransaction().rollback();
+            }
+        }
     }
 
     @Test
