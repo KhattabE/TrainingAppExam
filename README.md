@@ -14,9 +14,6 @@ Rasull Khan Hossein - [GitHub: reose7452](https://github.com/reose7452) - [Portf
 
 Khattab Elmir - [GitHub: KhattabE](https://github.com/KhattabE) - [Portfolio](https://khattabe.github.io/portfolio-2026/)
 
-Project overview video (max 5 min):
-
-TODO
 
 Deployed application:
 
