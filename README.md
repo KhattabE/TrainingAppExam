@@ -8,7 +8,7 @@ TrainingAppExam is a backend REST API that helps users create a fitness profile,
 
 ## Links
 
-Project team and portfolio websites:
+Project members and portfolio websites:
 
 Rasull Khan Hossein - [GitHub: reose7452](https://github.com/reose7452) - [Portfolio](https://reose7452.github.io/portfolio/)
 
