@@ -14,7 +14,6 @@ Rasull Khan Hossein - [GitHub: reose7452](https://github.com/reose7452) - [Portf
 
 Khattab Elmir - [GitHub: KhattabE](https://github.com/KhattabE) - [Portfolio](https://khattabe.github.io/portfolio-2026/)
 
-
 Deployed application:
 
 [TrainingAppExam health endpoint](https://trainingappexam.dk/api/health)
@@ -113,6 +112,8 @@ Important fields:
 ### WorkoutProgram
 
 Represents a personalized workout program generated from a user's stored profile. It contains a name, description, number of weekly training days and a collection of exercises.
+
+A user can have one workout program or none, and the data model allows several users to reference the same program. Programs and exercises have a many-to-many relationship. The join table, workoutprogram_exercise, has a composite primary key consisting of workoutprogram_id and exercises_id, so the same exercise can only be linked once to a particular program. The Java relationship uses a Set to represent these unique links.
 
 ### Exercise
 
@@ -386,7 +387,15 @@ Prerequisites:
 - PostgreSQL
 - Docker for the Testcontainers-based test suite
 
-The default local database is named training_app, uses the PostgreSQL user postgres and connects through jdbc:postgresql://localhost:5432/. Configure the required secrets as environment variables:
+The default local database is named training_app, uses the PostgreSQL user postgres and connects through jdbc:postgresql://localhost:5432/. Create the database before starting the application, for example by running this SQL in pgAdmin while connected to an existing database such as postgres on the local PostgreSQL server:
+
+```sql
+CREATE DATABASE training_app;
+```
+
+Skip this step if the database already exists. Hibernate creates or updates the tables when the application starts; it does not create the database itself. A new database has no exercise catalogue or sample users. Register a user and generate a workout program through the API to create exercises, which then become available through the public exercise endpoints.
+
+Configure the required secrets as environment variables in the terminal or IntelliJ run configuration used to start the application:
 
 ```bash
 export JDBC_PASSWORD="your-postgresql-password"
@@ -394,7 +403,7 @@ export JWT_SECRET="a-secret-value-containing-at-least-32-bytes"
 export GEMINI_API_KEY="your-gemini-api-key"
 ```
 
-CONNECTION_STR can optionally override the local connection prefix. It must end with `/` because the application appends the database name.
+CONNECTION_STR can optionally override the local connection prefix. It must end with `/` because the application appends the database name. Leave DEPLOYED unset when using this local configuration.
 
 Build and run the application:
 
@@ -405,6 +414,14 @@ java -jar target/app.jar
 
 The server starts on port 7070. It can also be started by running app.api.Application in IntelliJ.
 
+The checked in requests.http targets the deployed API. To test the local application, change its first line to:
+
+```http
+@baseUrl = http://localhost:7070
+```
+
+Requests are handled by the server selected by baseUrl and use that server's configured database. With the default local configuration, registration, profile updates and workout generation affect the local training_app database. With https://trainingappexam.dk, they affect the production database instead. Choose the target deliberately and use a unique test email when registering a new account. Changing baseUrl does not move or copy any existing data.
+
 ## Testing
 
 Run the full test suite with Docker running:
@@ -413,7 +430,7 @@ Run the full test suite with Docker running:
 mvn clean test
 ```
 
-The suite currently contains 75 tests: 41 API tests, 20 DAO tests and 14 service tests. Database-backed tests use an isolated PostgreSQL 16 Testcontainer, and the AI service is replaced with test doubles where external calls are not required.
+The suite currently contains 77 tests: 41 API tests, 22 DAO tests and 14 service tests. Database backed tests use an isolated PostgreSQL 16 Testcontainer, and the AI service is replaced with test doubles where external calls are not required.
 
 ## Deployment
 
