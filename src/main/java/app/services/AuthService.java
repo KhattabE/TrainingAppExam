@@ -20,7 +20,7 @@ public class AuthService {
         this.jwtService = jwtService;
     }
 
-    public User register(User user) {
+    public Registration register(User user) {
 
         String email = normalizeEmail(user.getEmail());
         user.setEmail(email);
@@ -34,14 +34,20 @@ public class AuthService {
 
         user.setPassword(hashedPassword);
 
+        User savedUser;
         try {
-            return userDAO.create(user);
+            savedUser = userDAO.create(user);
         } catch (PersistenceException exception) {
             if (isUniqueEmailViolation(exception)) {
                 throw new ApiException(409, "Email already in use");
             }
             throw exception;
         }
+
+        return new Registration(savedUser, jwtService.generateToken(savedUser));
+    }
+
+    public record Registration(User user, String token) {
     }
 
 

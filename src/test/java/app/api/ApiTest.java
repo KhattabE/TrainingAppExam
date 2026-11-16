@@ -354,16 +354,20 @@ class ApiTest extends DatabaseTest {
     }
 
     @Test
-    void registerPersistsHashedPasswordWithoutReturningIt() {
+    void registerReturnsProfileAndTokenWithoutReturningPassword() {
         RegisterRequestDTO registration =
                 registration("  REGISTER@Test.DK  ", "plain-password");
 
-        request().body(registration)
+        String token = request().body(registration)
                 .post("/auth/register")
                 .then().statusCode(201)
+                .contentType(ContentType.JSON)
+                .header("Cache-Control", equalTo("no-store"))
+                .body("$", allOf(not(hasKey("password")), not(hasKey("user"))))
                 .body("id", greaterThan(0),
                         "email", equalTo("register@test.dk"),
-                        "password", nullValue());
+                        "token", not(blankOrNullString()))
+                .extract().path("token");
 
         User stored = new UserDAOImpl(emf)
                 .getByEmail("register@test.dk");
@@ -372,6 +376,21 @@ class ApiTest extends DatabaseTest {
         assertNotEquals("plain-password", stored.getPassword());
         assertTrue(new PasswordService().verifyPassword(
                 "plain-password", stored.getPassword()));
+
+        request().header("Authorization", "Bearer " + token)
+                .get("/api/users/me")
+                .then().statusCode(200)
+                .body("id", equalTo(stored.getId()),
+                        "email", equalTo("register@test.dk"));
+    }
+
+    @Test
+    void duplicateRegistrationReturns409WithoutToken() {
+        request().body(registration(seed.beginner().getEmail(), "different-password"))
+                .post("/auth/register")
+                .then().statusCode(409)
+                .body("msg", equalTo("Email already in use"))
+                .body("$", not(hasKey("token")));
     }
 
     @Test
