@@ -111,10 +111,17 @@ public class AiCoachService {
                 Do not include markdown.
                 Do not include ```json.
                 Do not include explanations outside the JSON.
-                """.formatted(user.getAge(), user.getHeight(), user.getWeight(), user.getExperienceLevel(),
-                user.getGoal(), user.getTrainingDaysPerWeek(), user.getTrainingDaysPerWeek());
+                """.formatted(
+                        user.getAge(),
+                user.getHeight(),
+                user.getWeight(),
+                user.getExperienceLevel(),
+                user.getGoal(),
+                user.getTrainingDaysPerWeek(),
+                user.getTrainingDaysPerWeek());
 
         String json = stripCodeFences(callGemini(prompt, 1800, true));
+
         return objectMapper.readValue(json, GeneratedWorkoutProgramDTO.class);
     }
 
@@ -131,9 +138,7 @@ public class AiCoachService {
             generationConfig = Map.of("maxOutputTokens", maxOutputTokens);
         }
 
-        Map<String, Object> body = Map.of(
-                "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
-                "generationConfig", generationConfig);
+        Map<String, Object> body = Map.of("contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))), "generationConfig", generationConfig);
         String jsonBody = objectMapper.writeValueAsString(body);
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -143,6 +148,7 @@ public class AiCoachService {
                 .header("x-goog-api-key", apiKey)
                 .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
                 .build();
+
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         logger.info("Gemini responded with status {}", response.statusCode());
 

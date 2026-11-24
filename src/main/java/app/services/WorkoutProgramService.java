@@ -60,17 +60,16 @@ public class WorkoutProgramService {
 
                 for (GeneratedExerciseDTO generatedExercise : generatedProgram.exercises()) {
                     Exercise exercise = new Exercise(generatedExercise.name(), generatedExercise.muscleGroup(), generatedExercise.sets(), generatedExercise.reps());
-
                     em.persist(exercise);
                     exercises.add(exercise);
                 }
 
                 WorkoutProgram program = new WorkoutProgram(generatedProgram.name(), generatedProgram.description(), managedUser.getTrainingDaysPerWeek());
-
                 program.setExercises(exercises);
                 em.persist(program);
 
                 managedUser.setWorkoutProgram(program);
+
                 em.flush();
                 removeUnusedProgram(em, oldProgram);
 
@@ -138,13 +137,23 @@ public class WorkoutProgramService {
     }
 
     private void validateProgram(GeneratedWorkoutProgramDTO program) {
-        if (program == null || isBlank(program.name()) || isBlank(program.description()) || program.name().length() > MAX_TEXT_LENGTH || program.description().length() > MAX_TEXT_LENGTH || program.exercises() == null || program.exercises().isEmpty()) {
+        if (program == null
+                || isBlank(program.name())
+                || isBlank(program.description())
+                || program.name().length() > MAX_TEXT_LENGTH
+                || program.description().length() > MAX_TEXT_LENGTH
+                || program.exercises() == null || program.exercises().isEmpty()) {
 
             throw new ApiException(502, "AI generated an invalid workout program");
         }
 
         for (GeneratedExerciseDTO exercise : program.exercises()) {
-            if (exercise == null || isBlank(exercise.name()) || exercise.name().length() > MAX_TEXT_LENGTH || exercise.muscleGroup() == null || exercise.sets() <= 0 || exercise.reps() <= 0) {
+            if (exercise == null
+                    || isBlank(exercise.name())
+                    || exercise.name().length() > MAX_TEXT_LENGTH
+                    || exercise.muscleGroup() == null
+                    || exercise.sets() <= 0
+                    || exercise.reps() <= 0) {
 
                 throw new ApiException(502, "AI generated an invalid exercise");
             }

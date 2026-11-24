@@ -34,8 +34,7 @@ public class WorkoutProgramController {
 
         verifyOwnership(ctx, userId);
 
-        WorkoutProgram workoutProgram =
-                workoutProgramService.generateForUser(userId);
+        WorkoutProgram workoutProgram = workoutProgramService.generateForUser(userId);
 
         ctx.status(201).json(toResponse(workoutProgram));
     }
@@ -49,8 +48,7 @@ public class WorkoutProgramController {
 
         verifyOwnership(ctx, userId);
 
-        WorkoutProgram workoutProgram =
-                workoutProgramService.getForUser(userId);
+        WorkoutProgram workoutProgram = workoutProgramService.getForUser(userId);
 
         ctx.status(200).json(toResponse(workoutProgram));
     }
@@ -70,15 +68,11 @@ public class WorkoutProgramController {
         }
 
         if (loggedInUser.getId() != requestedUserId) {
-            throw new ApiException(
-                    403,
-                    "You cannot access another user's workout program"
-            );
+            throw new ApiException(403, "You cannot access another user's workout program");
         }
     }
 
-    private WorkoutProgramResponseDTO toResponse(
-            WorkoutProgram workoutProgram) {
+    private WorkoutProgramResponseDTO toResponse(WorkoutProgram workoutProgram) {
 
         List<ExerciseResponseDTO> exercises =
                 workoutProgram.getExercises().stream()
