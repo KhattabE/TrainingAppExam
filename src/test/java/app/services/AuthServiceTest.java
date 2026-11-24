@@ -32,7 +32,7 @@ class AuthServiceTest extends DatabaseTest {
     void registerHashesPasswordBeforePersistence() {
         User user = registrationUser("  NEW@Test.DK  ", "plain-password");
 
-        User registered = authService.register(user);
+        User registered = authService.register(user).user();
         User stored = userDAO.getById(registered.getId());
 
         assertEquals("new@test.dk", stored.getEmail());

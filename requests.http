@@ -9,7 +9,7 @@ GET {{baseUrl}}/api/health
 Accept: application/json
 
 
-### Register
+### Register and save the JWT
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
 Accept: application/json
@@ -25,6 +25,12 @@ Accept: application/json
   "trainingDaysPerWeek": 4,
   "goal": "MUSCLE_GAIN"
 }
+
+> {%
+  if (response.status === 201 && response.body.token) {
+    client.global.set("token", response.body.token);
+  }
+%}
 
 
 ### Login and save the JWT

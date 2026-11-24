@@ -3,6 +3,7 @@ package app.api;
 import app.dto.AuthResponseDTO;
 import app.dto.LoginRequestDTO;
 import app.dto.RegisterRequestDTO;
+import app.dto.RegisterResponseDTO;
 import app.dto.UserResponseDTO;
 import app.entities.User;
 import app.services.AuthService;
@@ -37,8 +38,8 @@ public class AuthController {
                 request.experienceLevel(), request.trainingDaysPerWeek(), request.goal());
         user.setPassword(request.password());
 
-        User savedUser = authService.register(user);
-        ctx.status(201).json(toResponse(savedUser));
+        AuthService.Registration registration = authService.register(user);
+        ctx.status(201).header("Cache-Control", "no-store").json(new RegisterResponseDTO(toResponse(registration.user()), registration.token()));
     }
 
     public void login(Context ctx) {

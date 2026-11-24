@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>TrainingApp</title>
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <a class="brand" href="./index.html" aria-label="TrainingApp forside">
+                <span class="brand-mark" aria-hidden="true">T</span>
+                TrainingApp
+            </a>
+            <nav aria-label="Konto">
+                <a href="#log-ind">Log ind</a>
+                <a href="#opret-konto">Opret konto</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="account">
+        <section class="account-panel register-panel" id="opret-konto" aria-labelledby="registreringstitel">
+            <h1 id="registreringstitel">Opret konto</h1>
+
+            <form method="post">
+                <fieldset disabled aria-label="Registrering – ikke aktiv endnu">
+                    <label class="field">Navn
+                        <input type="text" name="name">
+                    </label>
+                    <label class="field">E-mail
+                        <input type="email" name="email">
+                    </label>
+                    <label class="field">Adgangskode
+                        <input type="password" name="password">
+                    </label>
+                    <label class="field">Alder (år)
+                        <input type="number" name="age" min="1">
+                    </label>
+                    <label class="field">Højde (cm)
+                        <input type="number" name="height" min="0.1" step="0.1">
+                    </label>
+                    <label class="field">Vægt (kg)
+                        <input type="number" name="weight" min="0.1" step="0.1">
+                    </label>
+                    <label class="field">Erfaringsniveau
+                        <select name="experienceLevel">
+                            <option value="" selected>Vælg niveau</option>
+                            <option value="BEGINNER">Begynder</option>
+                            <option value="INTERMEDIATE">Let øvet</option>
+                            <option value="ADVANCED">Øvet</option>
+                        </select>
+                    </label>
+                    <label class="field">Træningsdage om ugen
+                        <input type="number" name="trainingDaysPerWeek" min="1" max="7">
+                    </label>
+                    <label class="field">Træningsmål
+                        <select name="goal">
+                            <option value="" selected>Vælg mål</option>
+                            <option value="MUSCLE_GAIN">Muskelmasse</option>
+                            <option value="STRENGTH">Styrke</option>
+                            <option value="WEIGHT_LOSS">Vægttab</option>
+                            <option value="GENERAL_FITNESS">Generel form</option>
+                        </select>
+                    </label>
+                    <button class="submit-button" type="submit">Opret konto</button>
+                </fieldset>
+            </form>
+        </section>
+
+        <section class="account-panel login-panel" id="log-ind" aria-labelledby="logintitel">
+            <h1 id="logintitel">Log ind</h1>
+
+            <form method="post">
+                <fieldset disabled aria-label="Login – ikke aktivt endnu">
+                    <label class="field">E-mail
+                        <input type="email" name="email">
+                    </label>
+                    <label class="field">Adgangskode
+                        <input type="password" name="password">
+                    </label>
+                    <button class="submit-button" type="submit">Log ind</button>
+                </fieldset>
+            </form>
+        </section>
+    </main>
+</body>
+</html>
