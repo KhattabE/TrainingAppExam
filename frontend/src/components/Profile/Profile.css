@@ -1,0 +1,20 @@
+.profile-panel {
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.profile-panel h1 {
+  margin-top: 0;
+}
+
+.profile-panel button {
+  width: 100%;
+  padding: 9px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background-color: #242424;
+  color: #f3f3f3;
+  font: inherit;
+  cursor: pointer;
+}

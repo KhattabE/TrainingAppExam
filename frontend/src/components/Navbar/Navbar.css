@@ -1,0 +1,52 @@
+.header-content a:focus-visible {
+  outline: 2px solid #f3f3f3;
+  outline-offset: 4px;
+}
+
+.site-header {
+  border-bottom: 1px solid #333;
+}
+
+.header-content {
+  max-width: 1040px;
+  min-height: 44px;
+  margin: 0 auto;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 650;
+  color: #f3f3f3;
+  text-decoration: none;
+}
+
+.brand-mark {
+  width: 28px;
+  line-height: 28px;
+  text-align: center;
+  border: 1px solid #555;
+  border-radius: 4px;
+}
+
+.header-content nav {
+  display: flex;
+  gap: 16px;
+  font-size: .875rem;
+}
+
+.header-content nav a {
+  color: #f3f3f3;
+  text-decoration: none;
+}
+
+.header-content nav a:hover {
+  text-decoration: underline;
+}

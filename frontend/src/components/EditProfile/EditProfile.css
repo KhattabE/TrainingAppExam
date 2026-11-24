@@ -1,0 +1,36 @@
+.edit-profile {
+  margin-top: 24px;
+}
+
+.edit-field {
+  display: block;
+  margin-bottom: 14px;
+  font-size: 0.875rem;
+}
+
+.edit-field input,
+.edit-field select {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  margin-top: 6px;
+  padding: 0 8px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background-color: #121212;
+  color: #f3f3f3;
+  font: inherit;
+}
+
+.edit-profile button {
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background-color: #242424;
+  color: #f3f3f3;
+  font: inherit;
+  cursor: pointer;
+}
